@@ -13,6 +13,8 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
@@ -421,65 +423,119 @@ export default function MediaAndVoiceCloningScreen({ navigation }) {
     const progress = uploadProgress[item.uri] || 0;
     const isServerProcessing = processingFileUri === 'processing-' + item.s3Key;
     const isUploadingThisFile = processingFileUri === item.uri;
+    
+    // Calculate progress color based on progress percentage
+    const progressColor = progress < 30 ? '#43435F' : 
+                          progress < 70 ? '#095684' : 
+                          '#5BDFD6';
 
     return (
       <View style={styles.fileItem}>
-        <Ionicons
-          name="document-text-outline"
-          size={20}
-          color="#333"
-          style={{ marginRight: 10 }}
-        />
-        <Text style={styles.fileName}>
-          {item.name} {item.processed ? '(Processed)' : ''}
-        </Text>
-
-        {isUploadingThisFile ? (
-          <View style={styles.progressContainer}>
-            <ActivityIndicator size="small" color="#0066cc" />
-            <Text style={styles.progressText}>{progress}%</Text>
+        <View style={styles.fileIconContainer}>
+          <Ionicons
+            name={item.mimeType?.includes('audio') ? "musical-note" : "videocam"}
+            size={22}
+            color="#fff"
+          />
+        </View>
+        
+        <View style={styles.fileInfoContainer}>
+          <Text style={styles.fileName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          
+          <View style={styles.fileStatusContainer}>
+            {item.processed ? (
+              <View style={styles.fileProcessedBadge}>
+                <Ionicons name="checkmark-circle" size={16} color="#5BDFD6" />
+                <Text style={styles.fileProcessedText}>Processed</Text>
+              </View>
+            ) : isUploadingThisFile || isServerProcessing ? (
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBarBackground}>
+                  <View 
+                    style={[
+                      styles.progressBarFill, 
+                      { 
+                        width: `${progress}%`,
+                        backgroundColor: progressColor
+                      }
+                    ]} 
+                  />
+                </View>
+                <View style={styles.progressTextContainer}>
+                  <ActivityIndicator size="small" color={progressColor} />
+                  <Text style={styles.progressText}>
+                    {isServerProcessing ? 'Converting...' : `${progress}%`}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.fileReadyText}>Ready to upload</Text>
+            )}
           </View>
-        ) : isServerProcessing ? (
-          <View style={styles.progressContainer}>
-            <ActivityIndicator size="small" color="#0066cc" />
-            <Text style={styles.progressText}>Converting...</Text>
-          </View>
-        ) : (
-          <Text style={styles.progressText}>{progress}%</Text>
-        )}
+        </View>
       </View>
     );
   }
 
   function renderSpeakerItem({ item }) {
     const speakerIsPlaying = isPlaying && currentSpeakerKey === item.s3Key;
+    const isSelected = chosenSpeakerKey === item.s3Key;
 
     return (
       <View
         style={[
           styles.speakerItem,
-          chosenSpeakerKey === item.s3Key && { backgroundColor: '#c1f0c1' },
+          isSelected && styles.speakerItemSelected,
         ]}
       >
-        <Text style={{ flex: 1, color: '#333' }}>Speaker {item.speaker}</Text>
-
-        <TouchableOpacity
-          style={styles.playPauseButton}
-          onPress={() => toggleSpeakerAudio(item)}
+        <LinearGradient
+          colors={isSelected ? ['#5BDFD6', '#43435F'] : ['#D9D0E7', '#D8B9E1']}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 0}}
+          style={styles.speakerItemGradient}
         >
-          <Ionicons
-            name={speakerIsPlaying ? 'pause' : 'play'}
-            size={16}
-            color="#fff"
-          />
-        </TouchableOpacity>
+          <View style={styles.speakerInfoContainer}>
+            <View style={[
+              styles.speakerIconContainer,
+              isSelected && {backgroundColor: '#5BDFD6'}
+            ]}>
+              <Ionicons name="person" size={18} color="#fff" />
+            </View>
+            <Text style={[styles.speakerText, isSelected && {color: '#fff'}]}>
+              Speaker {item.speaker}
+            </Text>
+          </View>
 
-        <TouchableOpacity
-          style={styles.selectButton}
-          onPress={() => selectSpeaker(item)}
-        >
-          <Ionicons name="checkmark" size={16} color="#fff" />
-        </TouchableOpacity>
+          <View style={styles.speakerButtonsContainer}>
+            <TouchableOpacity
+              style={[
+                styles.speakerActionButton, 
+                styles.playButton,
+                speakerIsPlaying && styles.pauseButton
+              ]}
+              onPress={() => toggleSpeakerAudio(item)}
+            >
+              <Ionicons
+                name={speakerIsPlaying ? 'pause' : 'play'}
+                size={16}
+                color="#fff"
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.speakerActionButton, 
+                styles.selectButton,
+                isSelected && styles.selectedButton
+              ]}
+              onPress={() => selectSpeaker(item)}
+            >
+              <Ionicons name="checkmark" size={16} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
       </View>
     );
   }
@@ -488,88 +544,119 @@ export default function MediaAndVoiceCloningScreen({ navigation }) {
   // Main Render
   // --------------------
   return (
-    <LinearGradient colors={['#f5f7fa', '#c3cfe2']} style={styles.gradient}>
+    <LinearGradient colors={['#D9D0E7', '#D8B9E1']} style={styles.gradient}>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container}>
-        <FlatList
-          ListHeaderComponent={
-            <>
-              <Text style={styles.title}>Media & Voice Cloning</Text>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <Text style={styles.title}>Media & Voice Cloning</Text>
+          <Text style={styles.subtitle}>Upload audio or video to create your AI voice clone</Text>
 
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={styles.primaryButton}
-                  onPress={pickMediaFiles}
-                  activeOpacity={0.8}
+          <View style={styles.cardContainer}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="cloud-upload" size={24} color="#43435F" />
+              <Text style={styles.cardTitle}>Select Media Files</Text>
+            </View>
+
+            <View style={styles.buttonGroup}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={pickMediaFiles}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#43435F', '#095684']}
+                  style={styles.buttonGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 1}}
                 >
                   <Ionicons
-                    name="add-circle-outline"
-                    size={20}
+                    name="document-text"
+                    size={22}
                     color="#fff"
-                    style={{ marginRight: 8 }}
+                    style={styles.buttonIcon}
                   />
-                  <Text style={styles.primaryButtonText}>Pick Files</Text>
-                </TouchableOpacity>
+                  <Text style={styles.buttonText}>Browse Files</Text>
+                </LinearGradient>
+              </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.primaryButton, { marginTop: 12 }]}
-                  onPress={pickFromCameraRoll}
-                  activeOpacity={0.8}
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={pickFromCameraRoll}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#43435F', '#095684']}
+                  style={styles.buttonGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 1}}
                 >
                   <Ionicons
-                    name="videocam-outline"
-                    size={20}
+                    name="images"
+                    size={22}
                     color="#fff"
-                    style={{ marginRight: 8 }}
+                    style={styles.buttonIcon}
                   />
-                  <Text style={styles.primaryButtonText}>
-                    Pick from Gallery
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          }
-          data={files}
-          renderItem={renderFileItem}
-          keyExtractor={(item, idx) => item.uri + idx}
-          contentContainerStyle={{ paddingBottom: 20 }}
-        />
-
-        {files.length > 0 && (
-          <View style={styles.uploadContainer}>
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={handleUploadAndProcessAll}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name="cloud-upload-outline"
-                size={20}
-                color="#fff"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.secondaryButtonText}>
-                Upload & Convert All
-              </Text>
-            </TouchableOpacity>
+                  <Text style={styles.buttonText}>From Gallery</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
 
-        <View style={styles.goHomeContainer}>
+          {files.length > 0 && (
+            <View style={[styles.cardContainer, { marginTop: 16 }]}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="list" size={24} color="#43435F" />
+                <Text style={styles.cardTitle}>Your Files</Text>
+                <Text style={styles.fileCount}>{files.length} item{files.length !== 1 ? 's' : ''}</Text>
+              </View>
+              
+              <FlatList
+                data={files}
+                renderItem={renderFileItem}
+                keyExtractor={(item, idx) => item.uri + idx}
+                contentContainerStyle={styles.fileList}
+                scrollEnabled={false}
+              />
+              
+              {files.length > 0 && (
+                <TouchableOpacity
+                  style={styles.uploadButton}
+                  onPress={handleUploadAndProcessAll}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={['#5BDFD6', '#095684']}
+                    style={styles.uploadButtonGradient}
+                    start={{x: 0, y: 0}}
+                    end={{x: 1, y: 0}}
+                  >
+                    <Ionicons
+                      name="cloud-upload"
+                      size={22}
+                      color="#fff"
+                      style={styles.buttonIcon}
+                    />
+                    <Text style={styles.uploadButtonText}>Upload & Process All</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           <TouchableOpacity
-            style={styles.goHomeButton}
+            style={styles.homeButton}
             onPress={() => navigation.navigate('Home')}
             activeOpacity={0.8}
           >
             <Ionicons
-              name="home-outline"
-              size={20}
-              color="#fff"
-              style={{ marginRight: 8 }}
+              name="home"
+              size={22}
+              color="#43435F"
+              style={styles.homeButtonIcon}
             />
-            <Text style={styles.goHomeButtonText}>Go Home</Text>
+            <Text style={styles.homeButtonText}>Return to Home</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
 
         {/* Diarization Modal */}
         <Modal
@@ -580,39 +667,48 @@ export default function MediaAndVoiceCloningScreen({ navigation }) {
         >
           <View style={styles.modalBackground}>
             <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Confirm Speaker Labels</Text>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Your Voice</Text>
+                <Text style={styles.modalSubtitle}>
+                  Listen to each speaker and select the one you want to clone
+                </Text>
+              </View>
+              
               <FlatList
                 data={speakerAudio}
                 renderItem={renderSpeakerItem}
-                keyExtractor={(_, i) => `speaker-${i}`}
-                style={{ marginTop: 16 }}
+                keyExtractor={(item, i) => `speaker-${i}`}
+                style={styles.speakerList}
+                contentContainerStyle={{paddingBottom: 10}}
               />
+              
               <View style={styles.modalButtonContainer}>
                 <TouchableOpacity
-                  style={styles.confirmButton}
+                  style={[styles.modalButton, styles.confirmButton]}
                   onPress={() => handleConfirmSpeakers(false, null)}
                   activeOpacity={0.8}
                 >
                   <Ionicons
-                    name="checkmark-circle-outline"
+                    name="checkmark-circle"
                     size={20}
                     color="#fff"
-                    style={{ marginRight: 8 }}
+                    style={styles.modalButtonIcon}
                   />
-                  <Text style={styles.confirmButtonText}>Confirm & Save</Text>
+                  <Text style={styles.modalButtonText}>Confirm Selection</Text>
                 </TouchableOpacity>
+                
                 <TouchableOpacity
-                  style={styles.cancelButton}
+                  style={[styles.modalButton, styles.cancelButton]}
                   onPress={() => setDiarizationModalVisible(false)}
                   activeOpacity={0.8}
                 >
                   <Ionicons
-                    name="close-circle-outline"
+                    name="close-circle"
                     size={20}
                     color="#fff"
-                    style={{ marginRight: 8 }}
+                    style={styles.modalButtonIcon}
                   />
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.modalButtonText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -623,7 +719,7 @@ export default function MediaAndVoiceCloningScreen({ navigation }) {
         {(processingFileUri || loading) && (
           <View style={styles.overlayContainer}>
             <View style={styles.overlay}>
-              <ActivityIndicator size="large" color="#ffffff" />
+              <ActivityIndicator size="large" color="#5BDFD6" />
               <Text style={styles.overlayText}>Processing...</Text>
             </View>
           </View>
@@ -639,209 +735,364 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingTop: 20,
-    paddingHorizontal: 16,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingTop: 40,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 22,
-    textAlign: 'center',
-    marginBottom: 16,
+    fontSize: 28,
     fontWeight: '700',
-    color: '#333',
+    color: '#43435F',
+    textAlign: 'center',
+    marginBottom: 6,
   },
-  buttonContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
+  subtitle: {
+    fontSize: 16,
+    color: '#095684',
+    textAlign: 'center',
+    marginBottom: 24,
+    opacity: 0.8,
   },
-  primaryButton: {
-    flexDirection: 'row',
-    backgroundColor: '#5f5fc4',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+  cardContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#43435F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 5,
   },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  uploadContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  secondaryButton: {
+  cardHeader: {
     flexDirection: 'row',
-    backgroundColor: '#28a745',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
     alignItems: 'center',
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#43435F',
+    marginLeft: 10,
+    flex: 1,
+  },
+  fileCount: {
+    fontSize: 14,
+    color: '#095684',
+    fontWeight: '500',
+  },
+  buttonGroup: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    flex: 1,
+    marginHorizontal: 5,
+    borderRadius: 12,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  secondaryButtonText: {
+  buttonGradient: {
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
+  },
+  fileList: {
+    marginTop: 8,
   },
   fileItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    backgroundColor: '#f9f9f9',
     borderRadius: 12,
     marginBottom: 12,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
-  fileName: {
+  fileIconContainer: {
+    backgroundColor: '#43435F',
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 46,
+  },
+  fileInfoContainer: {
     flex: 1,
+    padding: 12,
+    paddingLeft: 16,
+    justifyContent: 'center',
+  },
+  fileName: {
     fontSize: 14,
+    fontWeight: '500',
     color: '#333',
+    marginBottom: 4,
+  },
+  fileStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fileProcessedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(91, 223, 214, 0.1)',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  fileProcessedText: {
+    fontSize: 12,
+    color: '#5BDFD6',
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  fileReadyText: {
+    fontSize: 12,
+    color: '#095684',
   },
   progressContainer: {
+    flex: 1,
+  },
+  progressBarBackground: {
+    height: 6,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  progressTextContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   progressText: {
-    marginLeft: 8,
-    minWidth: 60,
-    textAlign: 'right',
-    fontSize: 13,
-    color: '#333',
+    fontSize: 12,
+    color: '#095684',
+    marginLeft: 6,
   },
-  goHomeContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  goHomeButton: {
-    flexDirection: 'row',
-    backgroundColor: '#5f5fc4',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    alignItems: 'center',
+  uploadButton: {
+    marginTop: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  goHomeButtonText: {
+  uploadButtonGradient: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  uploadButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
+  homeButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: 12,
+  },
+  homeButtonIcon: {
+    marginRight: 8,
+  },
+  homeButtonText: {
+    fontSize: 16,
+    color: '#43435F',
+    fontWeight: '500',
+  },
+  // Modal styles
   modalBackground: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   modalContainer: {
-    width: '85%',
+    width: '90%',
+    maxHeight: '80%',
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  modalHeader: {
     alignItems: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#333',
+    color: '#43435F',
+    marginBottom: 6,
     textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#095684',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  speakerList: {
+    maxHeight: 300,
+  },
+  speakerItem: {
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  speakerItemSelected: {
+    shadowColor: '#5BDFD6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  speakerItemGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+  },
+  speakerInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  speakerIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#43435F',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  speakerText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#333',
+  },
+  speakerButtonsContainer: {
+    flexDirection: 'row',
+  },
+  speakerActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  playButton: {
+    backgroundColor: '#095684',
+  },
+  pauseButton: {
+    backgroundColor: '#43435F',
+  },
+  selectButton: {
+    backgroundColor: '#43435F',
+  },
+  selectedButton: {
+    backgroundColor: '#5BDFD6',
   },
   modalButtonContainer: {
     flexDirection: 'row',
+    justifyContent: 'center',
     marginTop: 20,
   },
-  confirmButton: {
+  modalButton: {
     flexDirection: 'row',
-    backgroundColor: '#28a745',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 25,
     alignItems: 'center',
-    marginRight: 10,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
     elevation: 3,
   },
-  confirmButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  confirmButton: {
+    backgroundColor: '#5BDFD6',
   },
   cancelButton: {
-    flexDirection: 'row',
-    backgroundColor: '#dc3545',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 25,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 3,
+    backgroundColor: '#43435F',
   },
-  cancelButtonText: {
+  modalButtonIcon: {
+    marginRight: 6,
+  },
+  modalButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
-  speakerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f4f4f4',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 12,
-    width: '100%',
-  },
-  playPauseButton: {
-    backgroundColor: '#0077cc',
-    padding: 8,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  selectButton: {
-    backgroundColor: '#5f5fc4',
-    padding: 8,
-    borderRadius: 6,
-  },
-  // Full-screen loading overlay styles
+  // Loading overlay styles
   overlayContainer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
   },
   overlay: {
-    backgroundColor: '#333',
-    borderRadius: 10,
-    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
     alignItems: 'center',
+    width: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
   },
   overlayText: {
-    marginTop: 10,
-    color: '#fff',
+    marginTop: 16,
+    color: '#43435F',
     fontSize: 16,
+    fontWeight: '600',
   },
 });

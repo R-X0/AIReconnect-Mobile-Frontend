@@ -68,6 +68,7 @@ export default function PersonaSetupScreen({ route, navigation }) {
   const [isCloning, setIsCloning] = useState(false);
   const [cloneProgress, setCloneProgress] = useState(0);
   const [newVoiceId, setNewVoiceId] = useState(voiceId || '');
+  const [selectedPersonaIndex, setSelectedPersonaIndex] = useState(-1);
 
   // Fake progress so user sees a bit of "action"
   useEffect(() => {
@@ -203,6 +204,11 @@ export default function PersonaSetupScreen({ route, navigation }) {
     navigation.navigate('Home');
   }
 
+  function selectPersona(index) {
+    setSelectedPersonaIndex(index);
+    setTraits(COMMON_PERSONAS[index].traits);
+  }
+
   // Distinguish between editing existing or new creation
   const isEditingExisting = !!(voiceId && !localFile);
   const isCreatingNew = !!localFile;
@@ -211,32 +217,57 @@ export default function PersonaSetupScreen({ route, navigation }) {
   if (newVoiceId && isCloning === false && isCreatingNew) {
     return (
       <LinearGradient
-        colors={['#f5f7fa', '#c3cfe2']} // Same gradient as HomeScreen
+        colors={['#D9D0E7', '#D8B9E1']}
         style={styles.gradient}
       >
         <StatusBar barStyle="dark-content" />
-        <SafeAreaView style={styles.successContainer}>
-          <Ionicons name="checkmark-circle-outline" size={100} color="#28a745" />
-          <Text style={styles.successTitle}>Voice Cloned Successfully!</Text>
-          <Text style={styles.successSubtitle}>Voice ID: {newVoiceId}</Text>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.successContainer}>
+            <View style={styles.successIconContainer}>
+              <Ionicons name="checkmark-circle" size={80} color="#5BDFD6" />
+            </View>
+            <Text style={styles.successTitle}>Voice Cloned Successfully!</Text>
+            <Text style={styles.successSubtitle}>{speakerName}'s voice is ready to use</Text>
+            
+            <View style={styles.voiceIdCard}>
+              <Text style={styles.voiceIdLabel}>Voice ID:</Text>
+              <Text style={styles.voiceIdText}>{newVoiceId}</Text>
+            </View>
 
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={handleTestConversation}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="chatbubbles-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={styles.primaryButtonText}>Test in AI Conversation</Text>
-          </TouchableOpacity>
+            <View style={styles.actionButtonsContainer}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleTestConversation}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#43435F', '#095684']}
+                  style={styles.actionButtonGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 0}}
+                >
+                  <Ionicons name="chatbubbles" size={24} color="#fff" style={{marginBottom: 8}} />
+                  <Text style={styles.actionButtonText}>Test in Conversation</Text>
+                </LinearGradient>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={handleGoHome}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="home-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={styles.secondaryButtonText}>Go Back Home</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleGoHome}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#5BDFD6', '#095684']}
+                  style={styles.actionButtonGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 0}}
+                >
+                  <Ionicons name="home" size={24} color="#fff" style={{marginBottom: 8}} />
+                  <Text style={styles.actionButtonText}>Go to Home</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
         </SafeAreaView>
       </LinearGradient>
     );
@@ -244,307 +275,425 @@ export default function PersonaSetupScreen({ route, navigation }) {
 
   return (
     <LinearGradient
-      colors={['#f5f7fa', '#c3cfe2']} // Same gradient as HomeScreen
+      colors={['#D9D0E7', '#D8B9E1']}
       style={styles.gradient}
     >
       <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={styles.container}>
-        {/* Header can be added here if needed */}
-
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.title}>
-            {isEditingExisting ? 'Edit Persona' : 'Persona Setup'}
-          </Text>
-          <Text style={styles.subtitle}>
-            {isEditingExisting
-              ? 'Update the persona for this existing voice.'
-              : 'Define personality before cloning.'}
-          </Text>
-
-          <View style={styles.inputContainer}>
-            <Ionicons name="person-outline" size={20} color="#333" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Speaker Name (e.g., Sarah)"
-              placeholderTextColor="#999"
-              value={speakerName}
-              onChangeText={setSpeakerName}
-            />
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>
+              {isEditingExisting ? 'Edit Persona' : 'Create Voice Persona'}
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              {isEditingExisting
+                ? 'Update the personality traits for this voice'
+                : 'Define how your AI voice will sound and behave'}
+            </Text>
           </View>
 
-          {/* Quick persona selection */}
-          <Text style={styles.sectionTitle}>Select a Persona Type:</Text>
-          <ScrollView horizontal style={styles.personaScroll} showsHorizontalScrollIndicator={false}>
-            {COMMON_PERSONAS.map((item) => (
+          <View style={styles.formCard}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Voice Name</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="person" size={20} color="#43435F" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., Sarah, John, Mom..."
+                  placeholderTextColor="#999"
+                  value={speakerName}
+                  onChangeText={setSpeakerName}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Choose a Personality</Text>
+              <Text style={styles.inputSubLabel}>Select one or customize below</Text>
+              
+              <View style={styles.personaButtonsContainer}>
+                {COMMON_PERSONAS.map((persona, index) => (
+                  <TouchableOpacity
+                    key={persona.label}
+                    style={[
+                      styles.personaButton,
+                      selectedPersonaIndex === index && styles.personaButtonSelected
+                    ]}
+                    onPress={() => selectPersona(index)}
+                    activeOpacity={0.7}
+                  >
+                    <LinearGradient
+                      colors={
+                        selectedPersonaIndex === index 
+                        ? ['#5BDFD6', '#43435F'] 
+                        : ['#fff', '#fff']
+                      }
+                      style={styles.personaButtonGradient}
+                    >
+                      <Text 
+                        style={[
+                          styles.personaButtonText,
+                          selectedPersonaIndex === index && styles.personaButtonTextSelected
+                        ]}
+                      >
+                        {persona.label}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Personality Traits</Text>
+              <Text style={styles.inputSubLabel}>Describe the personality in detail</Text>
+              
+              <View style={styles.textAreaContainer}>
+                <TextInput
+                  style={styles.textArea}
+                  placeholder="e.g., friendly, witty, calm, energetic, professional..."
+                  placeholderTextColor="#999"
+                  multiline
+                  value={traits}
+                  onChangeText={setTraits}
+                  textAlignVertical="top"
+                />
+              </View>
+            </View>
+
+            {isCreatingNew && !isCloning && (
               <TouchableOpacity
-                key={item.label}
-                style={styles.personaButtonWrapper}
-                onPress={() => setTraits(item.traits)}
+                style={styles.submitButton}
+                onPress={handleSaveAndCloneNewVoice}
                 activeOpacity={0.8}
               >
-                <View style={styles.personaButton}>
-                  <Text style={styles.personaButtonText}>{item.label}</Text>
-                </View>
+                <LinearGradient
+                  colors={['#43435F', '#095684']}
+                  style={styles.submitButtonGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 0}}
+                >
+                  <Ionicons name="save" size={22} color="#fff" style={styles.submitButtonIcon} />
+                  <Text style={styles.submitButtonText}>Clone Voice</Text>
+                </LinearGradient>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <Text style={styles.hintText}>Or type your own traits:</Text>
+            )}
 
-          <View style={styles.textAreaContainer}>
-            <Ionicons name="chatbubble-outline" size={20} color="#333" style={styles.textAreaIcon} />
-            <TextInput
-              style={styles.textArea}
-              placeholder="Describe personality traits (e.g., witty, sarcastic)"
-              placeholderTextColor="#999"
-              multiline
-              value={traits}
-              onChangeText={setTraits}
-            />
+            {isEditingExisting && (
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleSavePersonaForExistingVoice}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#5BDFD6', '#095684']}
+                  style={styles.submitButtonGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 0}}
+                >
+                  <Ionicons name="save" size={22} color="#fff" style={styles.submitButtonIcon} />
+                  <Text style={styles.submitButtonText}>Save Changes</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+
+            {isCloning && (
+              <View style={styles.cloningProgressContainer}>
+                <View style={styles.progressBarContainer}>
+                  <View 
+                    style={[
+                      styles.progressBar, 
+                      { width: `${cloneProgress}%` }
+                    ]} 
+                  />
+                </View>
+                <View style={styles.progressTextContainer}>
+                  <ActivityIndicator size="small" color="#5BDFD6" />
+                  <Text style={styles.progressText}>
+                    Cloning Voice... {cloneProgress}%
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {isEditingExisting && (
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            )}
           </View>
-
-          {/* Action Buttons */}
-          {isCreatingNew && !newVoiceId && !isCloning && (
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={handleSaveAndCloneNewVoice}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="save-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.primaryButtonText}>Save & Clone Voice</Text>
-            </TouchableOpacity>
-          )}
-
-          {isEditingExisting && (
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={handleSavePersonaForExistingVoice}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="save-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.secondaryButtonText}>Save Persona</Text>
-            </TouchableOpacity>
-          )}
-
-          {isCloning && (
-            <View style={styles.cloneProgressContainer}>
-              <ActivityIndicator size="large" color="#5f5fc4" />
-              <Text style={styles.cloneProgressText}>Cloning Voice... {cloneProgress}%</Text>
-            </View>
-          )}
-
-          {isEditingExisting && (
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="arrow-back-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.cancelButtonText}>Cancel / Go Back</Text>
-            </TouchableOpacity>
-          )}
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
 }
 
-/**************************************************
- * STYLES
- **************************************************/
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 40,
   },
-  title: {
-    fontSize: 24,
+  header: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#43435F',
     marginBottom: 8,
     textAlign: 'center',
-    fontWeight: '700',
-    color: '#333',
   },
-  subtitle: {
+  headerSubtitle: {
     fontSize: 16,
-    marginBottom: 16,
+    color: '#095684',
     textAlign: 'center',
-    color: '#666',
+    paddingHorizontal: 20,
+  },
+  formCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#43435F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#43435F',
+    marginBottom: 8,
+  },
+  inputSubLabel: {
+    fontSize: 14,
+    color: '#095684',
+    marginBottom: 12,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#999',
+    backgroundColor: '#f8f8f8',
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#eaeaea',
+    height: 54,
   },
   inputIcon: {
-    marginRight: 8,
+    marginRight: 12,
   },
   input: {
     flex: 1,
     fontSize: 16,
     color: '#333',
   },
-  sectionTitle: {
-    fontSize: 16,
-    marginBottom: 8,
-    color: '#333',
-  },
-  personaScroll: {
-    marginBottom: 16,
-  },
-  personaButtonWrapper: {
-    marginRight: 12,
+  personaButtonsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   personaButton: {
-    backgroundColor: '#5f5fc4',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 25,
+    width: '48%',
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  personaButtonSelected: {
+    shadowColor: '#5BDFD6',
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowRadius: 5,
     elevation: 5,
+  },
+  personaButtonGradient: {
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   personaButtonText: {
-    color: '#fff',
+    color: '#43435F',
     fontSize: 14,
     fontWeight: '600',
+    textAlign: 'center',
   },
-  hintText: {
-    marginBottom: 8,
-    color: '#555',
-    fontSize: 14,
+  personaButtonTextSelected: {
+    color: '#fff',
   },
   textAreaContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#999',
+    backgroundColor: '#f8f8f8',
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    backgroundColor: '#fff',
-    marginBottom: 16,
-  },
-  textAreaIcon: {
-    marginTop: 4,
-    marginRight: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#eaeaea',
   },
   textArea: {
-    flex: 1,
     fontSize: 16,
     color: '#333',
-    height: 100,
-    textAlignVertical: 'top',
+    height: 120,
   },
-  primaryButton: {
+  submitButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  submitButtonGradient: {
     flexDirection: 'row',
-    backgroundColor: '#5f5fc4',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-
-    // Shadow for iOS
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-
-    // Elevation for Android
-    elevation: 5,
+    paddingVertical: 16,
   },
-  primaryButtonText: {
+  submitButtonIcon: {
+    marginRight: 10,
+  },
+  submitButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
-  secondaryButton: {
+  cloningProgressContainer: {
+    marginVertical: 10,
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#5BDFD6',
+    borderRadius: 4,
+  },
+  progressTextContainer: {
     flexDirection: 'row',
-    backgroundColor: '#28a745',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-
-    // Shadow for iOS
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-
-    // Elevation for Android
-    elevation: 5,
   },
-  secondaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cloneProgressContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  cloneProgressText: {
-    marginTop: 8,
-    color: '#333',
+  progressText: {
+    marginLeft: 8,
+    color: '#095684',
     fontSize: 14,
+    fontWeight: '500',
   },
   cancelButton: {
-    flexDirection: 'row',
-    backgroundColor: '#dc3545',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 30,
     alignItems: 'center',
-    justifyContent: 'center',
-
-    // Shadow for iOS
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-
-    // Elevation for Android
-    elevation: 5,
+    paddingVertical: 16,
+    marginTop: 12,
   },
   cancelButtonText: {
-    color: '#fff',
+    color: '#43435F',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
+  // Success screen styles
   successContainer: {
-    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    marginTop: 40,
+  },
+  successIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(217, 208, 231, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    marginBottom: 24,
   },
   successTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#333',
-    marginTop: 16,
+    color: '#43435F',
+    marginBottom: 8,
     textAlign: 'center',
   },
   successSubtitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#095684',
     marginBottom: 24,
+    textAlign: 'center',
+  },
+  voiceIdCard: {
+    backgroundColor: 'rgba(217, 208, 231, 0.3)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 30,
+    alignItems: 'center',
+    width: '100%',
+  },
+  voiceIdLabel: {
+    fontSize: 14,
+    color: '#43435F',
+    marginBottom: 4,
+  },
+  voiceIdText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#095684',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  actionButton: {
+    width: '48%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  actionButtonGradient: {
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
     textAlign: 'center',
   },
 });
