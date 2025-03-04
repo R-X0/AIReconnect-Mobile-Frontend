@@ -10,6 +10,9 @@ import {
   Alert,
   ScrollView,
   Modal,
+  Dimensions,
+  StatusBar,
+  SafeAreaView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -17,9 +20,12 @@ import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { Ionicons } from '@expo/vector-icons';
 import { Video } from 'expo-av';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import ENV from './env';
 const SERVER_URL = ENV.SERVER_URL;
+
+const { width } = Dimensions.get('window');
 
 export default function AIGenerationScreen() {
   // --- Image Generation State ---
@@ -80,7 +86,7 @@ export default function AIGenerationScreen() {
       });
       formData.append('prompt', prompt);
 
-      const response = await fetch(`${BACKEND_URL}/generate-image`, {
+      const response = await fetch(`${SERVER_URL}/generate-image`, {
         method: 'POST',
         body: formData,
       });
@@ -129,7 +135,7 @@ export default function AIGenerationScreen() {
       });
       formData.append('prompt', prompt);
 
-      const response = await fetch(`${BACKEND_URL}/generate-image`, {
+      const response = await fetch(`${SERVER_URL}/generate-image`, {
         method: 'POST',
         body: formData,
       });
@@ -224,7 +230,7 @@ export default function AIGenerationScreen() {
       });
       formData.append('prompt', videoPrompt);
 
-      const response = await fetch(`${BACKEND_URL}/generate-video`, {
+      const response = await fetch(`${SERVER_URL}/generate-video`, {
         method: 'POST',
         body: formData,
       });
@@ -264,344 +270,620 @@ export default function AIGenerationScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.instructions}>
-        Here you can generate stunning images and videos of yourself or others using AI.
-        Simply select an image, enter a creative prompt, and let the magic happen!
-      </Text>
+    <LinearGradient colors={['#D9D0E7', '#D8B9E1']} style={styles.gradient}>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <Text style={styles.headerTitle}>AI Content Generation</Text>
+          <Text style={styles.headerSubtitle}>
+            Create stunning images and videos with AI
+          </Text>
 
-      {/* ---------- IMAGE GENERATION SECTION ---------- */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Image Generation</Text>
-        <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-          {sourceImage ? (
-            <Image source={{ uri: sourceImage }} style={styles.image} />
-          ) : (
-            <Ionicons name="image-outline" size={50} color="#aaa" />
-          )}
-        </TouchableOpacity>
-        <TextInput
-          style={[styles.input, { minHeight: 60 }]}
-          placeholder="Enter prompt for image generation"
-          placeholderTextColor="#888"
-          value={prompt}
-          onChangeText={setPrompt}
-          multiline={true}
-          textAlignVertical="top"
-        />
-        <TouchableOpacity style={styles.button} onPress={generateImage}>
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Generate Image</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+          {/* ---------- IMAGE GENERATION SECTION ---------- */}
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconContainer}>
+                <Ionicons name="image" size={24} color="#fff" />
+              </View>
+              <View style={styles.sectionTitleContainer}>
+                <Text style={styles.sectionTitle}>Image Generation</Text>
+                <Text style={styles.sectionSubtitle}>Transform photos with AI</Text>
+              </View>
+            </View>
 
-      {/* ---------- VIDEO GENERATION SECTION ---------- */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Video Generation</Text>
-        <TouchableOpacity style={styles.imagePicker} onPress={pickVideoImage}>
-          {videoSourceImage ? (
-            <Image source={{ uri: videoSourceImage }} style={styles.image} />
-          ) : (
-            <Ionicons name="videocam-outline" size={50} color="#aaa" />
-          )}
-        </TouchableOpacity>
-        <TextInput
-          style={[styles.input, { minHeight: 60 }]}
-          placeholder="Enter prompt for video generation"
-          placeholderTextColor="#888"
-          value={videoPrompt}
-          onChangeText={setVideoPrompt}
-          multiline={true}
-          textAlignVertical="top"
-        />
-        <TouchableOpacity style={styles.button} onPress={generateVideo}>
-          {videoLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Generate Video</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+            <View style={styles.cardContainer}>
+              <View style={styles.imagePickerContainer}>
+                <TouchableOpacity 
+                  style={styles.imagePicker} 
+                  onPress={pickImage}
+                  activeOpacity={0.8}
+                >
+                  {sourceImage ? (
+                    <Image source={{ uri: sourceImage }} style={styles.pickedImage} />
+                  ) : (
+                    <View style={styles.placeholderContainer}>
+                      <Ionicons name="image-outline" size={50} color="#43435F" />
+                      <Text style={styles.placeholderText}>Tap to select image</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
 
-      {/* ---------- Modal for Generated Images ---------- */}
-      <Modal visible={isImageModalVisible} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => {
-                setIsImageModalVisible(false);
-                setGeneratedImages([]);
-              }}
-            >
-              <Text style={styles.closeButtonText}>×</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Generated Image</Text>
-            {generatedImages.length > 0 && (
-              <>
-                {/* Navigation arrows and counter placed above the image */}
-                <View style={styles.imageModalNavigation}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Transformation Prompt</Text>
+                <TextInput
+                  style={styles.promptInput}
+                  placeholder="Describe how to transform the image"
+                  placeholderTextColor="#999"
+                  value={prompt}
+                  onChangeText={setPrompt}
+                  multiline={true}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.generateButton,
+                  (!sourceImage || !prompt.trim()) && styles.disabledButton
+                ]}
+                onPress={generateImage}
+                disabled={!sourceImage || !prompt.trim() || loading}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={
+                    sourceImage && prompt.trim() && !loading 
+                      ? ['#43435F', '#095684'] 
+                      : ['#cccccc', '#999999']
+                  }
+                  style={styles.generateButtonGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 0}}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="color-wand" size={20} color="#fff" style={styles.buttonIcon} />
+                      <Text style={styles.generateButtonText}>Generate Image</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* ---------- VIDEO GENERATION SECTION ---------- */}
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <View style={[
+                styles.sectionIconContainer, 
+                {backgroundColor: '#5BDFD6'}
+              ]}>
+                <Ionicons name="videocam" size={24} color="#fff" />
+              </View>
+              <View style={styles.sectionTitleContainer}>
+                <Text style={styles.sectionTitle}>Video Generation</Text>
+                <Text style={styles.sectionSubtitle}>Animate your images with AI</Text>
+              </View>
+            </View>
+
+            <View style={styles.cardContainer}>
+              <View style={styles.imagePickerContainer}>
+                <TouchableOpacity 
+                  style={styles.imagePicker} 
+                  onPress={pickVideoImage}
+                  activeOpacity={0.8}
+                >
+                  {videoSourceImage ? (
+                    <Image source={{ uri: videoSourceImage }} style={styles.pickedImage} />
+                  ) : (
+                    <View style={styles.placeholderContainer}>
+                      <Ionicons name="videocam-outline" size={50} color="#43435F" />
+                      <Text style={styles.placeholderText}>Tap to select image</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Animation Prompt</Text>
+                <TextInput
+                  style={styles.promptInput}
+                  placeholder="Describe how to animate the image"
+                  placeholderTextColor="#999"
+                  value={videoPrompt}
+                  onChangeText={setVideoPrompt}
+                  multiline={true}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.generateButton,
+                  (!videoSourceImage || !videoPrompt.trim()) && styles.disabledButton
+                ]}
+                onPress={generateVideo}
+                disabled={!videoSourceImage || !videoPrompt.trim() || videoLoading}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={
+                    videoSourceImage && videoPrompt.trim() && !videoLoading 
+                      ? ['#5BDFD6', '#095684'] 
+                      : ['#cccccc', '#999999']
+                  }
+                  style={styles.generateButtonGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 0}}
+                >
+                  {videoLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="videocam" size={20} color="#fff" style={styles.buttonIcon} />
+                      <Text style={styles.generateButtonText}>Generate Video</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* ---------- Modal for Generated Images ---------- */}
+          <Modal
+            visible={isImageModalVisible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setIsImageModalVisible(false)}
+          >
+            <View style={styles.modalBackground}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Generated Image</Text>
                   <TouchableOpacity
-                    onPress={() =>
-                      setCurrentImageIndex((prev) => Math.max(prev - 1, 0))
-                    }
-                    disabled={currentImageIndex === 0}
+                    style={styles.closeButton}
+                    onPress={() => setIsImageModalVisible(false)}
                   >
-                    <Ionicons
-                      name="arrow-back"
-                      size={30}
-                      color={currentImageIndex === 0 ? '#ccc' : '#5f5fc4'}
-                    />
-                  </TouchableOpacity>
-                  <Text style={styles.imageCounter}>
-                    Image {currentImageIndex + 1} of {generatedImages.length}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setCurrentImageIndex((prev) =>
-                        Math.min(prev + 1, generatedImages.length - 1)
-                      )
-                    }
-                    disabled={currentImageIndex === generatedImages.length - 1}
-                  >
-                    <Ionicons
-                      name="arrow-forward"
-                      size={30}
-                      color={
-                        currentImageIndex === generatedImages.length - 1
-                          ? '#ccc'
-                          : '#5f5fc4'
-                      }
-                    />
+                    <Ionicons name="close" size={24} color="#43435F" />
                   </TouchableOpacity>
                 </View>
-                <Image
-                  source={{ uri: generatedImages[currentImageIndex] }}
-                  style={styles.modalImage}
-                />
-              </>
-            )}
-            <View style={styles.modalButtonContainer}>
-              <TouchableOpacity style={styles.modalButton} onPress={handleDownloadImage}>
-                <Text style={styles.modalButtonText}>Download</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={() => {
-                  // Use the current image for video generation.
-                  setVideoSourceImage(generatedImages[currentImageIndex]);
-                  setIsImageModalVisible(false);
-                }}
-              >
-                <Text style={styles.modalButtonText}>Use for Video</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={regenerateImage}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.modalButtonText}>Regenerate</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
-      {/* ---------- Modal for Generated Video ---------- */}
-      <Modal visible={isVideoModalVisible} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => {
-                setIsVideoModalVisible(false);
-                setGeneratedVideo(null);
-              }}
-            >
-              <Text style={styles.closeButtonText}>×</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Generated Video</Text>
-            {generatedVideo && (
-              <Video
-                source={{ uri: generatedVideo }}
-                rate={1.0}
-                volume={1.0}
-                isMuted={false}
-                resizeMode="cover"
-                shouldPlay
-                isLooping
-                style={styles.modalVideo}
-              />
-            )}
-            <View style={styles.modalButtonContainer}>
-              <TouchableOpacity style={styles.modalButton} onPress={handleDownloadVideo}>
-                <Text style={styles.modalButtonText}>Download</Text>
-              </TouchableOpacity>
+                {generatedImages.length > 0 && (
+                  <>
+                    {/* Image container */}
+                    <View style={styles.generatedImageContainer}>
+                      <Image
+                        source={{ uri: generatedImages[currentImageIndex] }}
+                        style={styles.generatedImage}
+                        resizeMode="contain"
+                      />
+
+                      {/* Navigation controls */}
+                      {generatedImages.length > 1 && (
+                        <View style={styles.imageNavigation}>
+                          <TouchableOpacity
+                            onPress={() => setCurrentImageIndex((prev) => Math.max(prev - 1, 0))}
+                            disabled={currentImageIndex === 0}
+                            style={[
+                              styles.imageNavButton,
+                              currentImageIndex === 0 && styles.imageNavButtonDisabled
+                            ]}
+                          >
+                            <Ionicons
+                              name="chevron-back"
+                              size={24}
+                              color={currentImageIndex === 0 ? "#ccc" : "#43435F"}
+                            />
+                          </TouchableOpacity>
+                          
+                          <Text style={styles.imageCounter}>
+                            {currentImageIndex + 1}/{generatedImages.length}
+                          </Text>
+                          
+                          <TouchableOpacity
+                            onPress={() => setCurrentImageIndex((prev) => 
+                              Math.min(prev + 1, generatedImages.length - 1)
+                            )}
+                            disabled={currentImageIndex === generatedImages.length - 1}
+                            style={[
+                              styles.imageNavButton,
+                              currentImageIndex === generatedImages.length - 1 && styles.imageNavButtonDisabled
+                            ]}
+                          >
+                            <Ionicons
+                              name="chevron-forward"
+                              size={24}
+                              color={currentImageIndex === generatedImages.length - 1 ? "#ccc" : "#43435F"}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Action buttons */}
+                    <View style={styles.modalActionButtons}>
+                      <TouchableOpacity 
+                        style={styles.modalActionButton}
+                        onPress={handleDownloadImage}
+                        activeOpacity={0.8}
+                      >
+                        <LinearGradient
+                          colors={['#43435F', '#095684']}
+                          style={styles.modalActionButtonGradient}
+                          start={{x: 0, y: 0}}
+                          end={{x: 1, y: 0}}
+                        >
+                          <Ionicons name="download" size={18} color="#fff" style={styles.modalActionButtonIcon} />
+                          <Text style={styles.modalActionButtonText}>Download</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity 
+                        style={styles.modalActionButton}
+                        onPress={() => {
+                          setVideoSourceImage(generatedImages[currentImageIndex]);
+                          setIsImageModalVisible(false);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <LinearGradient
+                          colors={['#5BDFD6', '#095684']}
+                          style={styles.modalActionButtonGradient}
+                          start={{x: 0, y: 0}}
+                          end={{x: 1, y: 0}}
+                        >
+                          <Ionicons name="videocam" size={18} color="#fff" style={styles.modalActionButtonIcon} />
+                          <Text style={styles.modalActionButtonText}>Use for Video</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity 
+                        style={styles.modalActionButton}
+                        onPress={regenerateImage}
+                        disabled={loading}
+                        activeOpacity={0.8}
+                      >
+                        <LinearGradient
+                          colors={loading ? ['#cccccc', '#999999'] : ['#095684', '#43435F']}
+                          style={styles.modalActionButtonGradient}
+                          start={{x: 0, y: 0}}
+                          end={{x: 1, y: 0}}
+                        >
+                          {loading ? (
+                            <ActivityIndicator color="#fff" size="small" />
+                          ) : (
+                            <>
+                              <Ionicons name="refresh" size={18} color="#fff" style={styles.modalActionButtonIcon} />
+                              <Text style={styles.modalActionButtonText}>Regenerate</Text>
+                            </>
+                          )}
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+              </View>
             </View>
-          </View>
-        </View>
-      </Modal>
-    </ScrollView>
+          </Modal>
+
+          {/* ---------- Modal for Generated Video ---------- */}
+          <Modal
+            visible={isVideoModalVisible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setIsVideoModalVisible(false)}
+          >
+            <View style={styles.modalBackground}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Generated Video</Text>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => setIsVideoModalVisible(false)}
+                  >
+                    <Ionicons name="close" size={24} color="#43435F" />
+                  </TouchableOpacity>
+                </View>
+
+                {generatedVideo && (
+                  <>
+                    <View style={styles.videoContainer}>
+                      <Video
+                        source={{ uri: generatedVideo }}
+                        rate={1.0}
+                        volume={1.0}
+                        isMuted={false}
+                        resizeMode="contain"
+                        shouldPlay
+                        isLooping
+                        style={styles.video}
+                        useNativeControls
+                      />
+                    </View>
+
+                    <View style={styles.modalActionButtons}>
+                      <TouchableOpacity 
+                        style={[styles.modalActionButton, {width: '100%'}]}
+                        onPress={handleDownloadVideo}
+                        activeOpacity={0.8}
+                      >
+                        <LinearGradient
+                          colors={['#43435F', '#095684']}
+                          style={styles.modalActionButtonGradient}
+                          start={{x: 0, y: 0}}
+                          end={{x: 1, y: 0}}
+                        >
+                          <Ionicons name="download" size={18} color="#fff" style={styles.modalActionButtonIcon} />
+                          <Text style={styles.modalActionButtonText}>Download Video</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+              </View>
+            </View>
+          </Modal>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: '#fff',
-    alignItems: 'center',
+  gradient: {
+    flex: 1,
   },
-  mainTitle: {
+  safeArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 40,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+  },
+  headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    marginVertical: 10,
-    color: '#333',
-  },
-  instructions: {
-    fontSize: 16,
-    color: '#666',
+    fontWeight: '700',
+    color: '#43435F',
     textAlign: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 10,
+    marginBottom: 6,
   },
-  section: {
-    width: '100%',
-    marginBottom: 40,
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#095684',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9f9f9',
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#eee',
+    marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginBottom: 15,
-    color: '#444',
-  },
-  imagePicker: {
-    width: '100%',
-    aspectRatio: 1,
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#5f5fc4',
-    borderRadius: 12,
+  sectionIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#43435F',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    overflow: 'hidden',
+    marginRight: 14,
   },
-  image: {
+  sectionTitleContainer: {
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#43435F',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#095684',
+  },
+  cardContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#43435F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  imagePickerContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  imagePicker: {
+    width: width - 80,
+    height: width - 80,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#43435F',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  pickedImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    borderRadius: 10,
   },
-  input: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    fontSize: 16,
-    color: '#333',
-  },
-  button: {
-    backgroundColor: '#5f5fc4',
-    paddingVertical: 14,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-    width: '100%',
+  placeholderContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
   },
-  buttonText: {
+  placeholderText: {
+    marginTop: 10,
+    color: '#43435F',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#43435F',
+    marginBottom: 8,
+  },
+  promptInput: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 100,
+    borderWidth: 1,
+    borderColor: '#eaeaea',
+    color: '#333',
+    fontSize: 16,
+    textAlignVertical: 'top',
+  },
+  generateButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+  generateButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  generateButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
-  modalOverlay: {
+  // Modal styles
+  modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   modalContent: {
-    width: '100%',
-    maxHeight: '80%',
+    width: '90%',
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 20,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 15,
+    fontWeight: '700',
+    color: '#43435F',
   },
-  imageModalNavigation: {
+  closeButton: {
+    padding: 5,
+  },
+  generatedImageContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  generatedImage: {
+    width: width * 0.8,
+    height: width * 0.8,
+    borderRadius: 10,
+    backgroundColor: '#f8f8f8',
+  },
+  imageNavigation: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginTop: 10,
+  },
+  imageNavButton: {
+    padding: 5,
+  },
+  imageNavButtonDisabled: {
+    opacity: 0.5,
   },
   imageCounter: {
     fontSize: 16,
-    color: '#333',
+    fontWeight: '500',
+    color: '#43435F',
     marginHorizontal: 10,
   },
-  modalImage: {
-    width: 250,
-    height: 250,
-    borderRadius: 12,
-    resizeMode: 'cover',
-  },
-  modalVideo: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  modalButtonContainer: {
+  modalActionButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
     flexWrap: 'wrap',
-    marginTop: 10,
+    justifyContent: 'space-between',
   },
-  modalButton: {
-    backgroundColor: '#5f5fc4',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+  modalActionButton: {
+    width: '32%',
     borderRadius: 8,
-    margin: 5,
-    minWidth: 100,
-    alignItems: 'center',
+    overflow: 'hidden',
+    marginBottom: 8,
   },
-  modalButtonText: {
+  modalActionButtonGradient: {
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  modalActionButtonIcon: {
+    marginRight: 5,
+  },
+  modalActionButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
-  closeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    padding: 5,
-    zIndex: 1,
+  // Video modal styles
+  videoContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: '#000',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  closeButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#555',
+  video: {
+    width: '100%',
+    height: '100%',
   },
 });
-

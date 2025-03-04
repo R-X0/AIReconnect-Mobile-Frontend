@@ -1,4 +1,4 @@
-// MobileWebRTC.js
+// Redesigned LiveAiConversationScreen.js
 import React, { useState, useEffect, useRef } from 'react';
 import {
   SafeAreaView,
@@ -11,14 +11,23 @@ import {
   ScrollView,
   Modal,
   TextInput,
+  Dimensions,
+  StatusBar,
+  Image,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { RTCView, RTCPeerConnection, mediaDevices } from 'react-native-webrtc';
 import { WebView } from 'react-native-webview';
 import * as ImagePicker from 'react-native-image-picker';
 import { Picker } from '@react-native-picker/picker';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { getToken } from '../authStorage';
-// Import custom environment variables
 import ENV from './env';
+
+const { width, height } = Dimensions.get('window');
 
 const configuration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -27,7 +36,7 @@ const configuration = {
 // Use environment variables for server URL
 const SERVER_URL = ENV.SERVER_URL;
 
-const MobileWebRTC = () => {
+const LiveAiConversationScreen = ({ navigation }) => {
   const [pc, setPc] = useState(null);
   const [localStream, setLocalStream] = useState(null);
   const [dailyUrl, setDailyUrl] = useState(null);
@@ -37,11 +46,11 @@ const MobileWebRTC = () => {
   const [avatars, setAvatars] = useState([]);
   const [sessionLoading, setSessionLoading] = useState(false);
 
-  // NEW STATE: voices & selectedVoiceId for ElevenLabs voices
+  // Voice selection state
   const [voices, setVoices] = useState([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState(null);
 
-  // NEW STATE: Modal for entering avatar name
+  // Avatar name modal state
   const [avatarNameModalVisible, setAvatarNameModalVisible] = useState(false);
   const [avatarName, setAvatarName] = useState('');
 
@@ -49,7 +58,7 @@ const MobileWebRTC = () => {
   const dataChannelRef = useRef(null);
 
   const logToConsole = (message) => {
-    console.log('[MobileWebRTC]', message);
+    console.log('[LiveAiConversationScreen]', message);
   };
 
   // Fetch avatars saved for the user.
@@ -362,75 +371,251 @@ const MobileWebRTC = () => {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.safeContainer}>
-      <View style={styles.container}>
-        {dailyUrl ? (
-          <WebView source={{ uri: dailyUrl }} style={styles.webview} />
-        ) : sessionLoading ? (
-          <View style={styles.loadingSessionContainer}>
-            <ActivityIndicator size="large" color="#2563eb" />
-            <Text style={styles.loadingText}>Starting session...</Text>
+  // Render avatar item
+  const renderAvatarItem = ({ item }) => (
+    <TouchableOpacity
+      style={[
+        styles.avatarItem,
+        selectedFaceId === item.faceId && styles.selectedAvatarItem
+      ]}
+      onPress={() => setSelectedFaceId(item.faceId)}
+      activeOpacity={0.7}
+    >
+      <LinearGradient
+        colors={
+          selectedFaceId === item.faceId 
+            ? ['#5BDFD6', '#095684'] 
+            : ['#ffffff', '#f5f5f5']
+        }
+        style={styles.avatarItemGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.avatarIconWrapper}>
+          <View style={[
+            styles.avatarIcon,
+            selectedFaceId === item.faceId && { backgroundColor: '#5BDFD6' }
+          ]}>
+            <Ionicons 
+              name="person" 
+              size={20} 
+              color={selectedFaceId === item.faceId ? '#ffffff' : '#43435F'} 
+            />
           </View>
-        ) : (
-          <ScrollView contentContainerStyle={styles.scrollContainer}>
-            <Text style={styles.header}>Mobile WebRTC</Text>
-            <CustomButton title="Create Avatar" onPress={openAvatarNameModal} />
-            {isAvatarLoading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#2563eb" />
-                <Text style={styles.loadingTextInline}>Creating Avatar...</Text>
-              </View>
-            )}
-            <Text style={styles.infoText}>
-              {selectedFaceId ? `Using avatar: ${selectedFaceId}` : 'No avatar selected.'}
-            </Text>
-            {pollStatus !== '' && <Text style={styles.pollStatus}>{pollStatus}</Text>}
-            {avatars.length > 0 && (
-              <View style={styles.dropdownContainer}>
-                <Text style={styles.dropdownLabel}>Select Avatar:</Text>
-                <Picker
-                  selectedValue={selectedFaceId}
-                  mode="dropdown"
-                  style={styles.picker}
-                  onValueChange={(itemValue) => setSelectedFaceId(itemValue)}
-                >
-                  {avatars.map((avatar) => (
-                    <Picker.Item
-                      key={avatar._id}
-                      label={avatar.faceName}
-                      value={avatar.faceId}
-                      color="#333"
-                    />
-                  ))}
-                </Picker>
-              </View>
-            )}
-            {voices.length > 0 && (
-              <View style={styles.dropdownContainer}>
-                <Text style={styles.dropdownLabel}>Select Voice:</Text>
-                <Picker
-                  selectedValue={selectedVoiceId}
-                  mode="dropdown"
-                  style={styles.picker}
-                  onValueChange={(itemValue) => setSelectedVoiceId(itemValue)}
-                >
-                  {voices.map((voice) => (
-                    <Picker.Item
-                      key={voice._id}
-                      label={voice.name}
-                      value={voice.voiceId}
-                      color="#333"
-                    />
-                  ))}
-                </Picker>
-              </View>
-            )}
-            <CustomButton title="Start Session" onPress={start} />
-          </ScrollView>
-        )}
+        </View>
+        <Text style={[
+          styles.avatarName,
+          selectedFaceId === item.faceId && { color: '#ffffff' }
+        ]}>
+          {item.faceName || 'Unnamed Avatar'}
+        </Text>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
 
-        {/* Avatar Name Modal */}
+  // Render voice item
+  const renderVoiceItem = ({ item }) => (
+    <TouchableOpacity
+      style={[
+        styles.voiceItem,
+        selectedVoiceId === item.voiceId && styles.selectedVoiceItem
+      ]}
+      onPress={() => setSelectedVoiceId(item.voiceId)}
+      activeOpacity={0.7}
+    >
+      <LinearGradient
+        colors={
+          selectedVoiceId === item.voiceId 
+            ? ['#43435F', '#095684'] 
+            : ['#ffffff', '#f5f5f5']
+        }
+        style={styles.voiceItemGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.voiceIconWrapper}>
+          <View style={[
+            styles.voiceIcon,
+            selectedVoiceId === item.voiceId && { backgroundColor: '#43435F' }
+          ]}>
+            <Ionicons 
+              name="mic" 
+              size={20} 
+              color={selectedVoiceId === item.voiceId ? '#ffffff' : '#43435F'} 
+            />
+          </View>
+        </View>
+        <Text style={[
+          styles.voiceName,
+          selectedVoiceId === item.voiceId && { color: '#ffffff' }
+        ]}>
+          {item.name || 'Unnamed Voice'}
+        </Text>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+
+  // Main layout when a session is active
+  if (dailyUrl) {
+    return (
+      <SafeAreaView style={styles.webviewContainer}>
+        <StatusBar barStyle="dark-content" />
+        <WebView 
+          source={{ uri: dailyUrl }} 
+          style={styles.webview}
+          allowsInlineMediaPlayback={true}
+          mediaPlaybackRequiresUserAction={false}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <LinearGradient colors={['#D9D0E7', '#D8B9E1']} style={styles.gradient}>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={styles.safeContainer}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+        >
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            <Text style={styles.headerTitle}>Live AI Conversation</Text>
+            <Text style={styles.headerSubtitle}>
+              Talk face-to-face with your AI companion
+            </Text>
+
+            {sessionLoading ? (
+              <View style={styles.loadingSessionContainer}>
+                <View style={styles.loadingIndicatorWrapper}>
+                  <ActivityIndicator size="large" color="#43435F" />
+                </View>
+                <Text style={styles.loadingText}>Starting interactive session...</Text>
+                <Text style={styles.loadingSubtext}>Please wait while we connect your avatar</Text>
+              </View>
+            ) : (
+              <>
+                {/* Avatar Selection Section */}
+                <View style={styles.sectionContainer}>
+                  <View style={styles.sectionHeader}>
+                    <View style={styles.sectionIconContainer}>
+                      <Ionicons name="person" size={24} color="#fff" />
+                    </View>
+                    <View style={styles.sectionTitleContainer}>
+                      <Text style={styles.sectionTitle}>Select Avatar</Text>
+                      <Text style={styles.sectionSubtitle}>Choose who you want to talk to</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.cardContainer}>
+                    {isAvatarLoading ? (
+                      <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#43435F" />
+                        <Text style={styles.loadingText}>Creating Avatar...</Text>
+                        {pollStatus && <Text style={styles.pollStatus}>{pollStatus}</Text>}
+                      </View>
+                    ) : avatars.length === 0 ? (
+                      <View style={styles.emptyStateContainer}>
+                        <Ionicons name="person-outline" size={50} color="#43435F" opacity={0.5} />
+                        <Text style={styles.emptyStateText}>
+                          You don't have any avatars yet. Create your first one!
+                        </Text>
+                      </View>
+                    ) : (
+                      <FlatList
+                        data={avatars}
+                        renderItem={renderAvatarItem}
+                        keyExtractor={item => item._id || item.faceId}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.avatarsList}
+                      />
+                    )}
+
+                    <TouchableOpacity
+                      style={styles.createButton}
+                      onPress={openAvatarNameModal}
+                      activeOpacity={0.8}
+                    >
+                      <LinearGradient
+                        colors={['#43435F', '#095684']}
+                        style={styles.createButtonGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                      >
+                        <Ionicons name="add-circle" size={20} color="#fff" style={styles.buttonIcon} />
+                        <Text style={styles.createButtonText}>Create New Avatar</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Voice Selection Section */}
+                <View style={styles.sectionContainer}>
+                  <View style={styles.sectionHeader}>
+                    <View style={[styles.sectionIconContainer, {backgroundColor: '#5BDFD6'}]}>
+                      <Ionicons name="mic" size={24} color="#fff" />
+                    </View>
+                    <View style={styles.sectionTitleContainer}>
+                      <Text style={styles.sectionTitle}>Select Voice</Text>
+                      <Text style={styles.sectionSubtitle}>Choose how your AI will sound</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.cardContainer}>
+                    {voices.length === 0 ? (
+                      <View style={styles.emptyStateContainer}>
+                        <Ionicons name="mic-off-outline" size={50} color="#43435F" opacity={0.5} />
+                        <Text style={styles.emptyStateText}>
+                          No voices found. Create a voice in Voice Cloning first.
+                        </Text>
+                      </View>
+                    ) : (
+                      <FlatList
+                        data={voices}
+                        renderItem={renderVoiceItem}
+                        keyExtractor={item => item._id || item.voiceId}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.voicesList}
+                      />
+                    )}
+                  </View>
+                </View>
+
+                {/* Start Conversation Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.startSessionButton,
+                    (!selectedFaceId || !selectedVoiceId) && styles.disabledButton
+                  ]}
+                  onPress={start}
+                  disabled={!selectedFaceId || !selectedVoiceId || isAvatarLoading}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={
+                      selectedFaceId && selectedVoiceId && !isAvatarLoading
+                        ? ['#095684', '#43435F']
+                        : ['#cccccc', '#999999']
+                    }
+                    style={styles.startSessionButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Ionicons name="videocam" size={24} color="#fff" style={styles.buttonIcon} />
+                    <Text style={styles.startSessionButtonText}>Start Live Conversation</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        {/* Name Input Modal */}
         <Modal
           transparent={true}
           animationType="fade"
@@ -439,166 +624,397 @@ const MobileWebRTC = () => {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Enter Avatar Name</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Avatar Name"
-                value={avatarName}
-                onChangeText={setAvatarName}
-              />
-              <TouchableOpacity style={styles.modalButton} onPress={confirmAvatarName}>
-                <Text style={styles.modalButtonText}>Continue</Text>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Name Your Avatar</Text>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setAvatarNameModalVisible(false)}
+                >
+                  <Ionicons name="close" size={24} color="#43435F" />
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.modalInstructions}>
+                Give your avatar a name so you can identify it easily
+              </Text>
+              
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Avatar Name"
+                  placeholderTextColor="#999"
+                  value={avatarName}
+                  onChangeText={setAvatarName}
+                />
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.modalButton} 
+                onPress={confirmAvatarName}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#43435F', '#095684']}
+                  style={styles.modalButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text style={styles.modalButtonText}>Continue</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
-const CustomButton = ({ title, onPress }) => (
-  <TouchableOpacity onPress={onPress} style={styles.button}>
-    <Text style={styles.buttonText}>{title}</Text>
-  </TouchableOpacity>
-);
-
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   safeContainer: {
     flex: 1,
-    backgroundColor: '#f2f4f7',
   },
   container: {
     flex: 1,
-    padding: 20,
   },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingVertical: 20,
+  scrollContent: {
+    paddingTop: 40,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
   },
-  header: {
+  headerTitle: {
     fontSize: 28,
     fontWeight: '700',
+    color: '#43435F',
     textAlign: 'center',
-    marginBottom: 25,
-    color: '#333',
+    marginBottom: 6,
   },
-  webview: {
-    flex: 1,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  button: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 15,
-    borderRadius: 10,
-    marginVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    elevation: 3,
-  },
-  buttonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: '600',
+  headerSubtitle: {
     fontSize: 16,
-  },
-  infoText: {
-    marginVertical: 12,
-    fontStyle: 'italic',
+    color: '#095684',
     textAlign: 'center',
-    color: '#555',
+    marginBottom: 24,
   },
-  loadingContainer: {
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 12,
+    marginBottom: 16,
+  },
+  sectionIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#43435F',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
   },
-  loadingTextInline: {
-    marginLeft: 10,
+  sectionTitleContainer: {
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#43435F',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#095684',
+  },
+  cardContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#43435F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 30,
+  },
+  emptyStateText: {
+    marginTop: 10,
+    color: '#666',
     fontSize: 16,
-    color: '#333',
+    textAlign: 'center',
+    lineHeight: 22,
   },
-  pollStatus: {
-    marginVertical: 10,
-    fontStyle: 'italic',
-    color: '#777',
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#43435F',
     textAlign: 'center',
   },
-  dropdownContainer: {
-    marginVertical: 12,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  loadingSubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#095684',
+    textAlign: 'center',
   },
-  dropdownLabel: {
-    fontSize: 16,
-    marginBottom: 6,
-    color: '#555',
-    fontWeight: '600',
-  },
-  picker: {
-    height: 50,
-    width: '100%',
-    color: '#333',
+  pollStatus: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
   loadingSessionContainer: {
-    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  loadingIndicatorWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  // Avatar list styles
+  avatarsList: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  avatarItem: {
+    width: 110,
+    height: 110,
+    marginRight: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  selectedAvatarItem: {
+    shadowColor: '#5BDFD6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  avatarItemGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+  },
+  avatarIconWrapper: {
+    marginBottom: 12,
+  },
+  avatarIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    marginTop: 10,
+  avatarName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#43435F',
+    textAlign: 'center',
+  },
+  // Voice list styles
+  voicesList: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  voiceItem: {
+    width: 110,
+    height: 110,
+    marginRight: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  selectedVoiceItem: {
+    shadowColor: '#43435F',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  voiceItemGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+  },
+  voiceIconWrapper: {
+    marginBottom: 12,
+  },
+  voiceIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  voiceName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#43435F',
+    textAlign: 'center',
+  },
+  // Button styles
+  createButton: {
+    marginTop: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  createButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  createButtonText: {
+    color: '#fff',
     fontSize: 16,
-    color: '#333',
+    fontWeight: '600',
+  },
+  startSessionButton: {
+    marginVertical: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+  startSessionButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+  },
+  startSessionButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
   },
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   modalContainer: {
-    width: '80%',
+    width: '90%',
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 16,
     padding: 20,
-    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 15,
-    textAlign: 'center',
-    color: '#333',
+    fontWeight: '700',
+    color: '#43435F',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalInstructions: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+  },
+  inputContainer: {
+    marginBottom: 20,
   },
   textInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 20,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     fontSize: 16,
     color: '#333',
+    borderWidth: 1,
+    borderColor: '#eaeaea',
   },
   modalButton: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  modalButtonGradient: {
+    paddingVertical: 14,
+    alignItems: 'center',
   },
   modalButtonText: {
     color: '#fff',
-    textAlign: 'center',
-    fontWeight: '600',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // WebView styles
+  webviewContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  webview: {
+    flex: 1,
   },
 });
 
-export default MobileWebRTC;
+export default LiveAiConversationScreen;

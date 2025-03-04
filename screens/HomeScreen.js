@@ -66,7 +66,7 @@ export default function HomeScreen({ navigation }) {
     setLoading(true);
     try {
       const token = await getToken();
-      const resp = await fetch(`${BACKEND_URL}/voices`, {
+      const resp = await fetch(`${SERVER_URL}/voices`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -87,7 +87,7 @@ export default function HomeScreen({ navigation }) {
     if (!selectedVoiceId) return;
     try {
       const token = await getToken();
-      const resp = await fetch(`${BACKEND_URL}/voices/${selectedVoiceId}`, {
+      const resp = await fetch(`${SERVER_URL}/voices/${selectedVoiceId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

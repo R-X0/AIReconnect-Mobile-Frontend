@@ -176,7 +176,7 @@ export default function MediaAndVoiceCloningScreen({ navigation }) {
   async function getSignedUrl(file) {
     try {
       const token = await getToken();
-      const resp = await fetch(`${BACKEND_URL}/upload-url`, {
+      const resp = await fetch(`${SERVER_URL}/upload-url`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -243,7 +243,7 @@ export default function MediaAndVoiceCloningScreen({ navigation }) {
 
     try {
       const token = await getToken();
-      const resp = await fetch(`${BACKEND_URL}/process`, {
+      const resp = await fetch(`${SERVER_URL}/process`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -314,7 +314,7 @@ export default function MediaAndVoiceCloningScreen({ navigation }) {
 
     try {
       const token = await getToken();
-      const resp = await fetch(`${BACKEND_URL}/confirm-speakers`, {
+      const resp = await fetch(`${SERVER_URL}/confirm-speakers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -334,7 +334,7 @@ export default function MediaAndVoiceCloningScreen({ navigation }) {
       setDiarizationModalVisible(false);
 
       // Now get the download URL for the chosen speaker
-      const urlResp = await fetch(`${BACKEND_URL}/get-download-url`, {
+      const urlResp = await fetch(`${SERVER_URL}/get-download-url`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

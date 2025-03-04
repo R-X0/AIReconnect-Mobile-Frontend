@@ -90,7 +90,7 @@ export default function PersonaSetupScreen({ route, navigation }) {
   async function handleSavePersonaForExistingVoice() {
     try {
       const token = await getToken();
-      const resp = await fetch(`${BACKEND_URL}/voices/${voiceId}`, {
+      const resp = await fetch(`${SERVER_URL}/voices/${voiceId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +166,7 @@ export default function PersonaSetupScreen({ route, navigation }) {
 
       // 4) Save voice + persona to DB
       const token = await getToken();
-      const saveResp = await fetch(`${BACKEND_URL}/voices`, {
+      const saveResp = await fetch(`${SERVER_URL}/voices`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

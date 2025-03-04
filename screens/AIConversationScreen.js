@@ -107,7 +107,7 @@ export default function AIConversationScreen({ route, navigation }) {
       setInitialLoading(true);
       const token = await getToken();
 
-      const resp = await fetch(`${BACKEND_URL}/api/conversations/${id}`, {
+      const resp = await fetch(`${SERVER_URL}/api/conversations/${id}`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -135,7 +135,7 @@ export default function AIConversationScreen({ route, navigation }) {
     setVoicesLoading(true);
     try {
       const token = await getToken();
-      const resp = await fetch(`${BACKEND_URL}/voices`, {
+      const resp = await fetch(`${SERVER_URL}/voices`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -163,7 +163,7 @@ export default function AIConversationScreen({ route, navigation }) {
     try {
       const token = await getToken();
       const response = await fetch(
-        `${BACKEND_URL}/api/conversations/${conversationId}/messages`,
+        `${SERVER_URL}/api/conversations/${conversationId}/messages`,
         {
           method: 'POST',
           headers: {
@@ -267,7 +267,7 @@ export default function AIConversationScreen({ route, navigation }) {
   async function updateConversationVoice(conversationId, voiceId) {
     try {
       const token = await getToken();
-      const resp = await fetch(`${BACKEND_URL}/api/conversations/${conversationId}`, {
+      const resp = await fetch(`${SERVER_URL}/api/conversations/${conversationId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

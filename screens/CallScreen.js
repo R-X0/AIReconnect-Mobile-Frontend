@@ -23,7 +23,7 @@ export default function CallScreen() {
     }
 
     try {
-      const response = await fetch(`${BACKEND_URL}/initiate-call`, {
+      const response = await fetch(`${SERVER_URL}/initiate-call`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ toNumber: phoneNumber }),
