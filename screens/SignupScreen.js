@@ -10,21 +10,36 @@ import {
   StyleSheet,
   Alert,
   StatusBar,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-
 import { storeToken } from '../authStorage';
 
 import ENV from './env';
 const SERVER_URL = ENV.SERVER_URL;
 
+const { height } = Dimensions.get('window');
+
 export default function SignupScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSignup() {
+    if (!email.trim()) {
+      Alert.alert('Email Required', 'Please enter your email address.');
+      return;
+    }
+    
+    if (!password.trim()) {
+      Alert.alert('Password Required', 'Please enter a password.');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
     try {
       const response = await fetch(`${SERVER_URL}/auth/register`, {
         method: 'POST',
@@ -32,36 +47,41 @@ export default function SignupScreen({ navigation }) {
         body: JSON.stringify({ email, password, name }),
       });
       const data = await response.json();
+      
       if (!response.ok) {
         Alert.alert('Signup Error', data.error || 'Unknown error');
         return;
       }
+      
       await storeToken(data.token);
       navigation.navigate('Home');
     } catch (err) {
       console.error('Signup error:', err);
-      Alert.alert('Error', 'Could not sign up');
+      Alert.alert('Error', 'Could not sign up. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <LinearGradient
-        colors={['#D9D0E7', '#D8B9E1']}
-        style={styles.gradient}
+    <LinearGradient colors={['#D9D0E7', '#D8B9E1']} style={styles.gradient}>
+      <StatusBar barStyle="dark-content" />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
       >
-        <StatusBar barStyle="dark-content" />
+        {/* Logo Section - Compact */}
         <View style={styles.logoContainer}>
-          <Ionicons name="person-add" size={80} color="#43435F" />
+          <View style={styles.logoCircle}>
+            <Ionicons name="person-add" size={40} color="#43435F" />
+          </View>
           <Text style={styles.appName}>AI Reconnect</Text>
         </View>
 
+        {/* Form Section */}
         <View style={styles.formContainer}>
-          <Text style={styles.title}>Create Your Account</Text>
-          <Text style={styles.subtitle}>Join the AI-driven voice revolution</Text>
+          <Text style={styles.title}>Create Account</Text>
 
           {/* Name Field */}
           <View style={styles.inputContainer}>
@@ -69,7 +89,7 @@ export default function SignupScreen({ navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Name (optional)"
-              placeholderTextColor="#43435F"
+              placeholderTextColor="#666"
               value={name}
               onChangeText={setName}
             />
@@ -82,7 +102,7 @@ export default function SignupScreen({ navigation }) {
               style={styles.input}
               autoCapitalize="none"
               placeholder="Email"
-              placeholderTextColor="#43435F"
+              placeholderTextColor="#666"
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
@@ -91,17 +111,12 @@ export default function SignupScreen({ navigation }) {
 
           {/* Password Field */}
           <View style={styles.inputContainer}>
-            <Ionicons
-              name="lock-closed"
-              size={20}
-              color="#43435F"
-              style={styles.icon}
-            />
+            <Ionicons name="lock-closed" size={20} color="#43435F" style={styles.icon} />
             <TextInput
               style={styles.input}
               secureTextEntry
               placeholder="Password"
-              placeholderTextColor="#43435F"
+              placeholderTextColor="#666"
               value={password}
               onChangeText={setPassword}
             />
@@ -110,23 +125,27 @@ export default function SignupScreen({ navigation }) {
           {/* Create Account Button */}
           <TouchableOpacity
             onPress={handleSignup}
-            style={styles.signupButton}
+            style={[styles.signupButton, isSubmitting && styles.disabledButton]}
             activeOpacity={0.8}
+            disabled={isSubmitting}
           >
-            <Text style={styles.signupButtonText}>Create Account</Text>
+            <Text style={styles.signupButtonText}>
+              {isSubmitting ? 'Creating Account...' : 'Create Account'}
+            </Text>
           </TouchableOpacity>
 
-          {/* Already have an account */}
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Login')}
-            style={styles.altButton}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.altButtonText}>Already have an account? Login</Text>
-          </TouchableOpacity>
+          {/* Already have account */}
+          <View style={styles.loginLinkContainer}>
+            <Text style={styles.loginLinkText}>Already have an account?</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={styles.loginLink}>Login</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </LinearGradient>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
@@ -134,24 +153,39 @@ export default function SignupScreen({ navigation }) {
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
+  },
+  container: {
+    flex: 1,
     justifyContent: 'center',
+    paddingHorizontal: 24,
   },
   logoContainer: {
     alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 30,
+    marginBottom: height * 0.02,
+  },
+  logoCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 5,
   },
   appName: {
     color: '#43435F',
-    fontSize: 28,
-    fontWeight: '600',
-    marginTop: 12,
+    fontSize: 24,
+    fontWeight: '700',
+    marginTop: 10,
   },
   formContainer: {
     backgroundColor: '#FFFFFF',
-    marginHorizontal: 24,
     borderRadius: 16,
-    padding: 24,
+    padding: 20,
     shadowColor: '#43435F',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -160,64 +194,68 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#43435F',
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 6,
-  },
-  subtitle: {
-    color: '#095684',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(217, 208, 231, 0.5)',
+    backgroundColor: 'rgba(217, 208, 231, 0.4)',
     borderRadius: 12,
-    marginBottom: 16,
-    paddingHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#D9D0E7',
+    borderColor: 'rgba(217, 208, 231, 0.8)',
+    height: 45,
   },
   icon: {
     marginRight: 10,
   },
   input: {
     flex: 1,
-    height: 50,
     color: '#43435F',
-    fontSize: 16,
+    fontSize: 15,
+    height: 45,
   },
   signupButton: {
     backgroundColor: '#095684',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'center',
+    marginTop: 6,
+    marginBottom: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 3,
     elevation: 3,
   },
+  disabledButton: {
+    backgroundColor: '#095684',
+    opacity: 0.7,
+  },
   signupButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
-  altButton: {
-    borderWidth: 1,
-    borderColor: '#43435F',
-    paddingVertical: 14,
-    borderRadius: 12,
+  loginLinkContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 12,
   },
-  altButtonText: {
+  loginLinkText: {
     color: '#43435F',
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 14,
+  },
+  loginLink: {
+    color: '#095684',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });
