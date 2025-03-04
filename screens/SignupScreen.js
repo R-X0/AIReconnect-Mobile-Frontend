@@ -9,6 +9,7 @@ import {
   Platform,
   StyleSheet,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,11 +50,12 @@ export default function SignupScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <LinearGradient
-        colors={['#1a1a2e', '#16213e', '#0f3460']}
+        colors={['#D9D0E7', '#D8B9E1']}
         style={styles.gradient}
       >
+        <StatusBar barStyle="dark-content" />
         <View style={styles.logoContainer}>
-          <Ionicons name="person-add" size={80} color="#fff" />
+          <Ionicons name="person-add" size={80} color="#43435F" />
           <Text style={styles.appName}>AI Reconnect</Text>
         </View>
 
@@ -63,11 +65,11 @@ export default function SignupScreen({ navigation }) {
 
           {/* Name Field */}
           <View style={styles.inputContainer}>
-            <Ionicons name="person" size={20} color="#ccc" style={styles.icon} />
+            <Ionicons name="person" size={20} color="#43435F" style={styles.icon} />
             <TextInput
               style={styles.input}
               placeholder="Name (optional)"
-              placeholderTextColor="#aaa"
+              placeholderTextColor="#43435F"
               value={name}
               onChangeText={setName}
             />
@@ -75,12 +77,12 @@ export default function SignupScreen({ navigation }) {
 
           {/* Email Field */}
           <View style={styles.inputContainer}>
-            <Ionicons name="mail" size={20} color="#ccc" style={styles.icon} />
+            <Ionicons name="mail" size={20} color="#43435F" style={styles.icon} />
             <TextInput
               style={styles.input}
               autoCapitalize="none"
               placeholder="Email"
-              placeholderTextColor="#aaa"
+              placeholderTextColor="#43435F"
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
@@ -92,14 +94,14 @@ export default function SignupScreen({ navigation }) {
             <Ionicons
               name="lock-closed"
               size={20}
-              color="#ccc"
+              color="#43435F"
               style={styles.icon}
             />
             <TextInput
               style={styles.input}
               secureTextEntry
               placeholder="Password"
-              placeholderTextColor="#aaa"
+              placeholderTextColor="#43435F"
               value={password}
               onChangeText={setPassword}
             />
@@ -117,7 +119,7 @@ export default function SignupScreen({ navigation }) {
           {/* Already have an account */}
           <TouchableOpacity
             onPress={() => navigation.navigate('Login')}
-            style={[styles.altButton, { marginTop: 16 }]}
+            style={styles.altButton}
             activeOpacity={0.8}
           >
             <Text style={styles.altButtonText}>Already have an account? Login</Text>
@@ -140,68 +142,82 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   appName: {
-    color: '#fff',
-    fontSize: 24,
+    color: '#43435F',
+    fontSize: 28,
     fontWeight: '600',
     marginTop: 12,
   },
   formContainer: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginHorizontal: 20,
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 24,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#43435F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   title: {
-    color: '#ffffff',
-    fontSize: 26,
+    color: '#43435F',
+    fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   subtitle: {
-    color: '#bbb',
-    fontSize: 14,
+    color: '#095684',
+    fontSize: 16,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 8,
-    marginBottom: 12,
-    paddingHorizontal: 10,
+    backgroundColor: 'rgba(217, 208, 231, 0.5)',
+    borderRadius: 12,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#D9D0E7',
   },
   icon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   input: {
     flex: 1,
-    height: 45,
-    color: '#fff',
+    height: 50,
+    color: '#43435F',
+    fontSize: 16,
   },
   signupButton: {
-    backgroundColor: '#e94560', // accent color
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: '#095684',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   signupButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
   altButton: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    paddingVertical: 12,
-    borderRadius: 8,
+    borderColor: '#43435F',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    marginTop: 16,
   },
   altButtonText: {
-    color: '#fff',
-    fontSize: 14,
+    color: '#43435F',
+    fontSize: 16,
     fontWeight: '500',
   },
 });

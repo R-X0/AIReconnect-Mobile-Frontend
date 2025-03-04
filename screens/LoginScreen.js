@@ -62,7 +62,7 @@ export default function LoginScreen({ navigation }) {
 
   async function handleLogin() {
     try {
-      const response = await fetch(`${SERVER_URL}/auth/login`, { // Use SERVER_URL instead of BACKEND_URL
+      const response = await fetch(`${SERVER_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -82,10 +82,10 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <LinearGradient colors={['#f5f7fa', '#c3cfe2']} style={styles.gradient}>
+      <LinearGradient colors={['#D9D0E7', '#D8B9E1']} style={styles.gradient}>
         <StatusBar barStyle="dark-content" />
         <View style={styles.headerArea}>
-          <Ionicons name="mic-circle" size={80} color="#3B3B98" />
+          <Ionicons name="mic-circle" size={80} color="#43435F" />
           <Text style={styles.logoText}>AI Reconnect</Text>
         </View>
 
@@ -94,12 +94,12 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.subtitle}>Log in to continue</Text>
 
           <View style={styles.inputWrapper}>
-            <Ionicons name="mail" size={20} color="#999" style={styles.icon} />
+            <Ionicons name="mail" size={20} color="#43435F" style={styles.icon} />
             <TextInput
               style={styles.input}
               autoCapitalize="none"
               placeholder="Email"
-              placeholderTextColor="#999"
+              placeholderTextColor="#43435F"
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
@@ -107,12 +107,12 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           <View style={styles.inputWrapper}>
-            <Ionicons name="lock-closed" size={20} color="#999" style={styles.icon} />
+            <Ionicons name="lock-closed" size={20} color="#43435F" style={styles.icon} />
             <TextInput
               style={styles.input}
               secureTextEntry
               placeholder="Password"
-              placeholderTextColor="#999"
+              placeholderTextColor="#43435F"
               value={password}
               onChangeText={setPassword}
             />
@@ -154,88 +154,96 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   logoText: {
-    color: '#333',
-    fontSize: 24,
+    color: '#43435F',
+    fontSize: 28,
     fontWeight: '600',
     marginTop: 12,
   },
   formContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 24,
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 3,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#43435F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   welcomeTitle: {
-    color: '#333',
-    fontSize: 22,
+    color: '#43435F',
+    fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   subtitle: {
-    color: '#666',
-    fontSize: 14,
+    color: '#095684',
+    fontSize: 16,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f4f4f4',
-    borderRadius: 8,
-    marginBottom: 12,
-    paddingHorizontal: 10,
+    backgroundColor: 'rgba(217, 208, 231, 0.5)',
+    borderRadius: 12,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#D9D0E7',
   },
   icon: {
-    marginRight: 6,
+    marginRight: 10,
   },
   input: {
     flex: 1,
-    height: 44,
-    color: '#333',
+    height: 50,
+    color: '#43435F',
+    fontSize: 16,
   },
   loginButton: {
-    backgroundColor: '#3B3B98',
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: '#095684',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   loginButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
   altButton: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    paddingVertical: 12,
-    borderRadius: 8,
+    borderColor: '#43435F',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 16,
   },
   altButtonText: {
-    color: '#333',
-    fontSize: 14,
+    color: '#43435F',
+    fontSize: 16,
     fontWeight: '500',
   },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4285F4',
-    borderRadius: 8,
-    paddingVertical: 12,
+    backgroundColor: '#43435F',
+    borderRadius: 12,
+    paddingVertical: 14,
     justifyContent: 'center',
     marginTop: 16,
   },
   googleButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
   },
 });
