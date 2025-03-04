@@ -1,6 +1,8 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { TouchableOpacity, Text } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 import HomeScreen from '../screens/HomeScreen';
 import AIConversationScreen from '../screens/AIConversationScreen';
@@ -42,16 +44,26 @@ export default function MainStackNavigator() {
         component={HomeScreen}
         options={({ navigation }) => ({
           title: 'AI Reconnect',
+          headerTitleAlign: 'left', // Changed from default center to left
           headerLeft: () => null,
           headerRight: () => (
             <TouchableOpacity
-              style={{ marginRight: 16 }}
+              style={styles.logoutButton}
               onPress={async () => {
                 await removeToken();
                 navigation.replace('Login');
               }}
+              activeOpacity={0.8}
             >
-              <Text style={{ color: '#007AFF', fontSize: 16 }}>Logout</Text>
+              <LinearGradient
+                colors={['#43435F', '#095684']}
+                style={styles.logoutGradient}
+                start={{x: 0, y: 0}}
+                end={{x: 1, y: 1}}
+              >
+                <Ionicons name="log-out-outline" size={16} color="#fff" style={{marginRight: 5}} />
+                <Text style={styles.logoutText}>Logout</Text>
+              </LinearGradient>
             </TouchableOpacity>
           ),
         })}
@@ -108,7 +120,10 @@ export default function MainStackNavigator() {
       <Stack.Screen
         name="LiveAiConversation"
         component={LiveAiConversationScreen}
-        options={{ title: 'Live AI Conversation' }}
+        options={{ 
+          title: 'Live AI Conversation',
+          headerTitleAlign: 'left' // Also aligning this title to the left
+        }}
       />
 
       {/* NEW: AI Video Generation Screen */}
@@ -120,3 +135,28 @@ export default function MainStackNavigator() {
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  logoutButton: {
+    marginRight: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  logoutGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  }
+});
