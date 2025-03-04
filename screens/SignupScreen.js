@@ -25,7 +25,7 @@ export default function SignupScreen({ navigation }) {
 
   async function handleSignup() {
     try {
-      const response = await fetch(`${BACKEND_URL}/auth/register`, {
+      const response = await fetch(`${SERVER_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name }),

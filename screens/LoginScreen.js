@@ -38,7 +38,7 @@ export default function LoginScreen({ navigation }) {
   useEffect(() => {
     if (response?.type === 'success' && response.authentication) {
       const { idToken } = response.authentication;
-      fetch(`${SERVER_URL}/auth/google`, { // Use SERVER_URL instead of BACKEND_URL
+      fetch(`${SERVER_URL}/auth/google`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),

@@ -88,8 +88,7 @@ android {
 
     namespace "com.aireconnect"
     defaultConfig {
-        applicationId "com.elden12345.aireconnect"  // Change this
-        namespace "com.elden12345.aireconnect"      // Change this
+        applicationId "com.aireconnect"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
