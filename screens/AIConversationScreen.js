@@ -13,7 +13,9 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
-  SafeAreaView, // <--- Import SafeAreaView
+  SafeAreaView,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +26,8 @@ import { getToken } from '../authStorage';
 
 import ENV from './env';
 const SERVER_URL = ENV.SERVER_URL;
+
+const { width, height } = Dimensions.get('window');
 
 const getEnvVariables = () => {
   if (Constants.manifest?.extra) {
@@ -53,8 +57,10 @@ export default function AIConversationScreen({ route, navigation }) {
   const [availableVoices, setAvailableVoices] = useState([]);
   const [voicesLoading, setVoicesLoading] = useState(false);
   const [voiceModalVisible, setVoiceModalVisible] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
   const flatListRef = useRef(null);
+  const inputRef = useRef(null);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Cleanup TTS on unmount
@@ -195,7 +201,7 @@ export default function AIConversationScreen({ route, navigation }) {
       console.error('Error sending message:', error);
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Error: Could not reach GPT.' },
+        { role: 'assistant', content: 'Error: Could not reach the AI server.' },
       ]);
     } finally {
       setSending(false);
@@ -208,6 +214,7 @@ export default function AIConversationScreen({ route, navigation }) {
       return;
     }
     try {
+      setIsPlayingAudio(true);
       const ttsResponse = await fetch(
         `https://api.elevenlabs.io/v1/text-to-speech/${vId}`,
         {
@@ -244,8 +251,16 @@ export default function AIConversationScreen({ route, navigation }) {
       await sound.current.unloadAsync();
       await sound.current.loadAsync({ uri: fileUri });
       await sound.current.playAsync();
+      
+      // Add event handler for playback status
+      sound.current.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setIsPlayingAudio(false);
+        }
+      });
     } catch (err) {
       console.error('playElevenLabsAudio error:', err);
+      setIsPlayingAudio(false);
     }
   }
 
@@ -288,17 +303,108 @@ export default function AIConversationScreen({ route, navigation }) {
     }
   }
 
-  function renderItem({ item }) {
+  function formatTimestamp(timestamp) {
+    if (!timestamp) return '';
+    
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderItem({ item, index }) {
     const isUser = item.role === 'user';
+    const showTimestamp = index === 0 || 
+      (index > 0 && messages[index-1].role !== item.role);
+      
     return (
       <View
         style={[
           styles.messageContainer,
-          isUser ? styles.userMessage : styles.aiMessage,
+          isUser ? styles.userMessageContainer : styles.aiMessageContainer,
         ]}
       >
-        <Text style={styles.messageText}>{item.content}</Text>
+        {!isUser && showTimestamp && (
+          <View style={styles.avatarContainer}>
+            <LinearGradient
+              colors={['#43435F', '#095684']}
+              style={styles.avatarGradient}
+            >
+              <Text style={styles.avatarText}>AI</Text>
+            </LinearGradient>
+          </View>
+        )}
+        
+        <View style={[
+          styles.messageBubble,
+          isUser ? styles.userMessage : styles.aiMessage,
+        ]}>
+          <Text style={[
+            styles.messageText,
+            isUser ? styles.userMessageText : styles.aiMessageText
+          ]}>
+            {item.content}
+          </Text>
+          
+          {item.timestamp && (
+            <Text style={styles.messageTimestamp}>
+              {formatTimestamp(item.timestamp)}
+            </Text>
+          )}
+        </View>
+        
+        {isUser && showTimestamp && (
+          <View style={styles.avatarContainer}>
+            <LinearGradient
+              colors={['#5BDFD6', '#095684']}
+              style={styles.avatarGradient}
+            >
+              <Text style={styles.avatarText}>You</Text>
+            </LinearGradient>
+          </View>
+        )}
       </View>
+    );
+  }
+
+  function renderVoiceItem({ item }) {
+    const isSelected = item.voiceId === currentVoiceId;
+    
+    return (
+      <TouchableOpacity
+        style={[
+          styles.voiceItem,
+          isSelected && styles.voiceItemSelected
+        ]}
+        onPress={() => onSelectVoice(item)}
+        activeOpacity={0.7}
+      >
+        <LinearGradient
+          colors={
+            isSelected ? ['#5BDFD6', '#095684'] : ['#ffffff', '#f5f5f5']
+          }
+          style={styles.voiceItemGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.voiceIconWrapper}>
+            <View style={[
+              styles.voiceIcon,
+              isSelected && styles.voiceIconSelected
+            ]}>
+              <Ionicons 
+                name="mic" 
+                size={20} 
+                color={isSelected ? '#ffffff' : '#43435F'} 
+              />
+            </View>
+          </View>
+          <Text style={[
+            styles.voiceName,
+            isSelected && styles.voiceNameSelected
+          ]}>
+            {item.name || 'Unnamed Voice'}
+          </Text>
+        </LinearGradient>
+      </TouchableOpacity>
     );
   }
 
@@ -307,26 +413,152 @@ export default function AIConversationScreen({ route, navigation }) {
 
   if (initialLoading) {
     return (
-      <LinearGradient colors={['#f5f7fa', '#c3cfe2']} style={styles.gradient}>
+      <LinearGradient colors={['#D9D0E7', '#D8B9E1']} style={styles.gradient}>
         <StatusBar barStyle="dark-content" />
-        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-          <ActivityIndicator size="large" color="#333" />
-          <Text style={{ color: '#333', marginTop: 10 }}>Loading conversation...</Text>
-        </View>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.loadingContainer}>
+            <View style={styles.loadingIndicatorWrapper}>
+              <ActivityIndicator size="large" color="#43435F" />
+            </View>
+            <Text style={styles.loadingText}>Loading conversation...</Text>
+            <Text style={styles.loadingSubtext}>Just a moment while we retrieve your messages</Text>
+          </View>
+        </SafeAreaView>
       </LinearGradient>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      // Increase offset if you want the bottom bar to rise further on iOS
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-    >
-      <LinearGradient colors={['#f5f7fa', '#c3cfe2']} style={styles.gradient}>
-        <SafeAreaView style={{ flex: 1 }}>
-          <StatusBar barStyle="dark-content" />
+    <LinearGradient colors={['#D9D0E7', '#D8B9E1']} style={styles.gradient}>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color="#43435F" />
+            </TouchableOpacity>
+            
+            <View style={styles.titleContainer}>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {persona?.speakerName || 'AI Conversation'}
+              </Text>
+            </View>
+            
+            <TouchableOpacity
+              style={styles.selectVoiceButton}
+              onPress={() => setVoiceModalVisible(true)}
+            >
+              <Ionicons name="options" size={24} color="#43435F" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Voice selection indicator */}
+          <View style={styles.voiceSelectionBar}>
+            <View style={styles.voiceSelectionContent}>
+              <Ionicons name="mic" size={16} color="#095684" />
+              <Text style={styles.voiceSelectionText}>
+                {currentVoiceId 
+                  ? `Voice: ${selectedVoiceName}` 
+                  : 'No voice selected - Tap to choose a voice'
+                }
+              </Text>
+              {isPlayingAudio && (
+                <View style={styles.playingIndicator}>
+                  <ActivityIndicator size="small" color="#5BDFD6" />
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Message List */}
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderItem}
+            keyExtractor={(item, idx) => `message-${idx}`}
+            style={styles.messagesList}
+            contentContainerStyle={styles.messagesContent}
+            initialNumToRender={15}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyConversationContainer}>
+                <View style={styles.emptyIconContainer}>
+                  <Ionicons name="chatbubbles-outline" size={50} color="#43435F" style={{opacity: 0.5}} />
+                </View>
+                <Text style={styles.emptyTitle}>No messages yet</Text>
+                <Text style={styles.emptySubtitle}>Start the conversation by typing a message below</Text>
+              </View>
+            }
+          />
+
+          {/* Input Section */}
+          <View style={styles.inputSection}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                ref={inputRef}
+                style={styles.input}
+                placeholder="Type your message..."
+                placeholderTextColor="#999"
+                value={userInput}
+                onChangeText={setUserInput}
+                multiline
+                maxHeight={100}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  (!userInput.trim() || sending) && styles.sendButtonDisabled
+                ]}
+                onPress={() => sendMessage(userInput)}
+                disabled={!userInput.trim() || sending}
+              >
+                <LinearGradient
+                  colors={
+                    userInput.trim() && !sending
+                      ? ['#43435F', '#095684']
+                      : ['#cccccc', '#999999']
+                  }
+                  style={styles.sendButtonGradient}
+                >
+                  {sending ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="send" size={20} color="#fff" />
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.inputOptionsContainer}>
+              <TouchableOpacity 
+                style={styles.inputOptionButton}
+                onPress={() => setVoiceModalVisible(true)}
+              >
+                <Ionicons name="mic-outline" size={20} color="#43435F" />
+                <Text style={styles.inputOptionText}>Voice</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.inputOptionButton}>
+                <Ionicons name="image-outline" size={20} color="#43435F" />
+                <Text style={styles.inputOptionText}>Image</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.inputOptionButton}>
+                <Ionicons name="ellipsis-horizontal" size={20} color="#43435F" />
+                <Text style={styles.inputOptionText}>More</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Voice selection modal */}
           <Modal
@@ -337,102 +569,55 @@ export default function AIConversationScreen({ route, navigation }) {
           >
             <View style={styles.modalOverlay}>
               <View style={styles.modalContainer}>
-                <Text style={styles.modalTitle}>Select a Voice</Text>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select a Voice</Text>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => setVoiceModalVisible(false)}
+                  >
+                    <Ionicons name="close" size={24} color="#43435F" />
+                  </TouchableOpacity>
+                </View>
+                
                 {voicesLoading ? (
-                  <ActivityIndicator size="large" color="#333" />
+                  <View style={styles.modalLoadingContainer}>
+                    <ActivityIndicator size="large" color="#43435F" />
+                    <Text style={styles.modalLoadingText}>Loading voices...</Text>
+                  </View>
+                ) : availableVoices.length === 0 ? (
+                  <View style={styles.modalEmptyContainer}>
+                    <Ionicons name="mic-off-outline" size={40} color="#43435F" style={{opacity: 0.5}} />
+                    <Text style={styles.modalEmptyText}>
+                      No voices available. Create a voice in Voice Cloning first.
+                    </Text>
+                  </View>
                 ) : (
                   <FlatList
                     data={availableVoices}
-                    renderItem={({ item }) => {
-                      const isSelected = item.voiceId === currentVoiceId;
-                      return (
-                        <TouchableOpacity
-                          style={[
-                            styles.voiceOption,
-                            isSelected && styles.selectedVoiceItem,
-                          ]}
-                          onPress={() => onSelectVoice(item)}
-                        >
-                          <Text style={styles.voiceOptionText}>
-                            {item.name} (ID: {item.voiceId})
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    }}
-                    keyExtractor={(item) => item._id}
+                    renderItem={renderVoiceItem}
+                    keyExtractor={(item) => item._id || item.voiceId}
+                    numColumns={2}
+                    contentContainerStyle={styles.voicesGrid}
                   />
                 )}
-                <View style={styles.modalButtonWrapper}>
-                  <TouchableOpacity
-                    style={styles.closeModalButton}
-                    onPress={() => setVoiceModalVisible(false)}
-                  >
-                    <Text style={styles.closeModalText}>Close</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </Modal>
-
-          <View style={styles.container}>
-            {/* Display selected voice ABOVE the chat */}
-            <View style={styles.selectedVoiceContainer}>
-              <Text style={styles.selectedVoiceLabel}>
-                Currently Selected Voice: {selectedVoiceName}
-              </Text>
-            </View>
-
-            {/* Chat list */}
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              renderItem={renderItem}
-              keyExtractor={(item, idx) => `message-${idx}`}
-              style={styles.chatList}
-              contentContainerStyle={{ padding: 16, paddingTop: 8 }}
-            />
-
-            {/* Bottom row: Voice button + text input + send */}
-            <View style={styles.bottomContainer}>
-              <TouchableOpacity
-                style={styles.selectVoiceButton}
-                onPress={() => setVoiceModalVisible(true)}
-              >
-                <Ionicons
-                  name="megaphone-outline"
-                  size={20}
-                  color="#fff"
-                  style={{ marginRight: 6 }}
-                />
-                <Text style={styles.selectVoiceText}>Voice</Text>
-              </TouchableOpacity>
-
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Type your message..."
-                  placeholderTextColor="#999"
-                  value={userInput}
-                  onChangeText={setUserInput}
-                  onSubmitEditing={() => sendMessage(userInput)}
-                />
+                
                 <TouchableOpacity
-                  style={[styles.sendButton, sending && { backgroundColor: '#999' }]}
-                  onPress={() => sendMessage(userInput)}
-                  disabled={sending}
+                  style={styles.modalCloseButton}
+                  onPress={() => setVoiceModalVisible(false)}
                 >
-                  {sending ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.sendButtonText}>Send</Text>
-                  )}
+                  <LinearGradient
+                    colors={['#43435F', '#095684']}
+                    style={styles.modalCloseButtonGradient}
+                  >
+                    <Text style={styles.modalCloseButtonText}>Close</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
-    </KeyboardAvoidingView>
+          </Modal>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
@@ -443,138 +628,366 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  chatList: {
+  keyboardAvoidingView: {
     flex: 1,
   },
-  messageContainer: {
-    marginVertical: 4,
-    padding: 10,
-    borderRadius: 6,
-    maxWidth: '80%',
-  },
-  userMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#f4511e',
-    borderTopRightRadius: 0,
-  },
-  aiMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#3B3B98',
-    borderTopLeftRadius: 0,
-  },
-  messageText: {
-    color: '#fff',
-    fontSize: 15,
-  },
-  bottomContainer: {
+  // Header styles
+  header: {
     flexDirection: 'row',
-    padding: 8,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
     alignItems: 'center',
-    // Optional extra padding to lift the bottom container a bit more:
-    paddingBottom: Platform.OS === 'ios' ? 16 : 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    padding: 4,
+  },
+  titleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#43435F',
   },
   selectVoiceButton: {
+    padding: 4,
+  },
+  // Voice selection bar
+  voiceSelectionBar: {
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  voiceSelectionContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3B3B98',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginRight: 8,
   },
-  selectVoiceText: {
-    fontWeight: '600',
-    color: '#fff',
+  voiceSelectionText: {
+    marginLeft: 8,
     fontSize: 14,
+    color: '#43435F',
+    flex: 1,
+  },
+  playingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  // Messages list
+  messagesList: {
+    flex: 1,
+  },
+  messagesContent: {
+    padding: 16,
+    paddingTop: 8,
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    maxWidth: '85%',
+  },
+  userMessageContainer: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row-reverse',
+  },
+  aiMessageContainer: {
+    alignSelf: 'flex-start',
+  },
+  avatarContainer: {
+    marginHorizontal: 8,
+  },
+  avatarGradient: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  messageBubble: {
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingBottom: 22, // Extra space for timestamp
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
+    position: 'relative',
+  },
+  userMessage: {
+    backgroundColor: '#5BDFD6',
+    borderBottomRightRadius: 4,
+  },
+  aiMessage: {
+    backgroundColor: '#fff',
+    borderBottomLeftRadius: 4,
+  },
+  messageText: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  userMessageText: {
+    color: '#fff',
+  },
+  aiMessageText: {
+    color: '#43435F',
+  },
+  messageTimestamp: {
+    position: 'absolute',
+    right: 10,
+    bottom: 4,
+    fontSize: 10,
+    color: 'rgba(0, 0, 0, 0.4)',
+  },
+  // Empty conversation state
+  emptyConversationContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    marginTop: 40,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#43435F',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#095684',
+    textAlign: 'center',
+    opacity: 0.8,
+  },
+  // Input section
+  inputSection: {
+    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
   },
   inputContainer: {
-    flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#f4f4f4',
-    borderRadius: 8,
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   input: {
     flex: 1,
-    paddingHorizontal: 12,
-    color: '#333',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingRight: 40,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#eaeaea',
+    maxHeight: 100,
   },
   sendButton: {
-    backgroundColor: '#3B3B98',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
+    position: 'absolute',
+    right: 4,
+    bottom: 4,
+    borderRadius: 20,
+    overflow: 'hidden',
   },
-  sendButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+  sendButtonDisabled: {
+    opacity: 0.7,
   },
-  // Modal
+  sendButtonGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inputOptionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 12,
+  },
+  inputOptionButton: {
+    alignItems: 'center',
+  },
+  inputOptionText: {
+    fontSize: 12,
+    color: '#43435F',
+    marginTop: 4,
+  },
+  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   modalContainer: {
-    marginHorizontal: 20,
+    width: '90%',
     backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#43435F',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  voicesGrid: {
+    paddingVertical: 8,
+  },
+  voiceItem: {
+    width: '48%',
+    aspectRatio: 1,
+    marginBottom: 12,
+    marginHorizontal: '1%',
     borderRadius: 12,
-    padding: 16,
-    maxHeight: '70%',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  voiceItemSelected: {
+    shadowColor: '#5BDFD6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  voiceItemGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,
+  },
+  voiceIconWrapper: {
+    marginBottom: 12,
+  },
+  voiceIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  voiceIconSelected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  voiceName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#43435F',
+    textAlign: 'center',
+  },
+  voiceNameSelected: {
+    color: '#fff',
+  },
+  modalLoadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalLoadingText: {
+    marginTop: 10,
+    color: '#43435F',
+    fontSize: 16,
+  },
+  modalEmptyContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalEmptyText: {
+    marginTop: 10,
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalCloseButton: {
+    marginTop: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  modalTitle: {
+  modalCloseButtonGradient: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Loading screen
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingIndicatorWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  loadingText: {
     fontSize: 18,
     fontWeight: '600',
+    color: '#43435F',
     marginBottom: 8,
-    color: '#333',
     textAlign: 'center',
   },
-  voiceOption: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
-  },
-  selectedVoiceItem: {
-    backgroundColor: '#dceeff',
-  },
-  voiceOptionText: {
+  loadingSubtext: {
     fontSize: 14,
-    color: '#333',
-  },
-  modalButtonWrapper: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  closeModalButton: {
-    backgroundColor: '#3B3B98',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  closeModalText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  // Selected Voice label (moved above chat)
-  selectedVoiceContainer: {
-    padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-  },
-  selectedVoiceLabel: {
-    fontSize: 14,
-    color: '#555',
+    color: '#095684',
+    textAlign: 'center',
+    opacity: 0.8,
   },
 });
