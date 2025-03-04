@@ -185,12 +185,12 @@ export default function HomeScreen({ navigation }) {
     );
   }
 
-  function renderHomeTab() {
+  function   renderHomeTab() {
     return (
       <View style={styles.tabContent}>
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Welcome to AI Reconnect</Text>
-          <Text style={styles.welcomeSubtitle}>Create, chat, and call with AI voice clones</Text>
+          <Text style={styles.welcomeTitle}>AI Reconnect</Text>
+          <Text style={styles.welcomeSubtitle}>Voice clones & AI conversations</Text>
         </View>
 
         <View style={styles.featureCardsContainer}>
@@ -262,37 +262,27 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.smallCardTitle}>AI Video</Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        <View style={styles.recentVoicesSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Your Voices</Text>
-            <TouchableOpacity onPress={() => setActiveTab('voices')}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {loading ? (
-            <ActivityIndicator color="#43435F" size="large" style={{ marginTop: 20 }} />
-          ) : clonedVoices.length === 0 ? (
-            <View style={styles.emptyStateContainer}>
-              <Ionicons name="mic-off-outline" size={40} color="#999" />
-              <Text style={styles.emptyStateText}>No voices created yet</Text>
-              <TouchableOpacity 
-                style={styles.emptyStateButton}
-                onPress={() => navigation.navigate('WizardFlow')}
-              >
-                <Text style={styles.emptyStateButtonText}>Create Your First Voice</Text>
-              </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.mainFeatureCard, { marginTop: 0 }]}
+            onPress={() => navigation.navigate('LiveAiConversation')}
+            activeOpacity={0.9}
+          >
+            <View style={styles.quickStartContainer}>
+              <View style={[styles.featureCardIcon, { backgroundColor: '#E67E22' }]}>
+                <Ionicons name="videocam-outline" size={28} color="#fff" />
+              </View>
+              <View style={styles.quickStartTextContainer}>
+                <Text style={styles.featureCardTitle}>Live AI Mode</Text>
+                <Text style={styles.featureCardSubtitle}>
+                  Interactive real-time AI conversation
+                </Text>
+              </View>
+              <View style={styles.quickStartArrow}>
+                <Ionicons name="arrow-forward-circle" size={32} color="#E67E22" />
+              </View>
             </View>
-          ) : (
-            <FlatList
-              data={clonedVoices.slice(0, 3)} // Show only the first 3 voices
-              renderItem={renderVoiceItem}
-              keyExtractor={(item) => item._id}
-              scrollEnabled={false}
-            />
-          )}
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -368,12 +358,6 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('PersonaSetupScreen')}>
             <Ionicons name="person-circle-outline" size={24} color="#43435F" />
             <Text style={styles.settingText}>Manage Personas</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('LiveAiConversation')}>
-            <Ionicons name="videocam-outline" size={24} color="#43435F" />
-            <Text style={styles.settingText}>Live AI Mode</Text>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
           
@@ -501,37 +485,38 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   tabContent: {
-    padding: 20,
+    padding: 16,
+    paddingTop: 10,
   },
   welcomeSection: {
-    marginBottom: 25,
-    marginTop: 20,
+    marginBottom: 12,
+    marginTop: 10,
   },
   welcomeTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#43435F',
     textAlign: 'center',
   },
   welcomeSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#095684',
     textAlign: 'center',
-    marginTop: 5,
+    marginTop: 2,
   },
   featureCardsContainer: {
-    marginBottom: 30,
+    marginBottom: 10,
   },
   mainFeatureCard: {
     backgroundColor: '#fff',
     borderRadius: 15,
-    marginBottom: 16,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 5,
-    height: 100,
+    height: 90,
   },
   quickStartContainer: {
     flexDirection: 'row',
@@ -567,14 +552,14 @@ const styles = StyleSheet.create({
   smallCardsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   smallFeatureCard: {
     backgroundColor: '#fff',
     borderRadius: 15,
-    padding: 15,
+    padding: 12,
     width: '48%',
-    height: 110,
+    height: 90,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -584,20 +569,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   smallCardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   smallCardTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: '#43435F',
-  },
-  recentVoicesSection: {
-    marginBottom: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
